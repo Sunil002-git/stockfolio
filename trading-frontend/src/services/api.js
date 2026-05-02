@@ -1,17 +1,26 @@
-import React from 'react'
 import axios from "axios";
 
 const API = axios.create({
-    baseURL: "http://127.0.0.1:8000/api/",
+  baseURL: "http://127.0.0.1:8000/api/",
 });
 
 API.interceptors.request.use((req) => {
-    const token = localStorage.getItem("token");
-    if(token) {
-        req.headers.Authorization = `Bearer ${token}`;
+  const token = localStorage.getItem("token");
+  if (token) {
+    req.headers.Authorization = `Bearer ${token}`;
+  }
+  return req;
+});
+
+API.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401) {
+      localStorage.removeItem("token");
+      window.location.href = "/";
     }
+    return Promise.reject(err);
+  }
+);
 
-    return req;
-})
-
-export default API
+export default API;
