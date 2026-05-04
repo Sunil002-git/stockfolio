@@ -5,11 +5,9 @@ import API from "../services/api";
 
 const initialForm = {
   symbol: "",
-  trade_type: "buy",
   segment: "equity",
   exchange: "NSE",
   buy_price: "",
-  sell_price: "",
   quantity: "",
   charges: "",
   date: new Date().toISOString().split("T")[0],
@@ -18,7 +16,6 @@ const initialForm = {
   expiry_date: "",
   lot_size: "",
   // MF fields
-  nav: "",
   fund_house: "",
   // Notes
   notes: "",
@@ -50,16 +47,6 @@ const AddTrade = () => {
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  // Computed P&L preview
-  const pl =
-    form.buy_price && form.sell_price && form.quantity
-      ? (
-          (parseFloat(form.sell_price) - parseFloat(form.buy_price)) *
-            parseInt(form.quantity) -
-          parseFloat(form.charges || 0)
-        ).toFixed(2)
-      : null;
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -67,15 +54,34 @@ const AddTrade = () => {
     setSuccess("");
 
     // Build payload — strip empty strings to null
-    const payload = {};
-    Object.entries(form).forEach(([k, v]) => {
-      payload[k] = v === "" ? null : v;
-    });
+    const payload = {
+      symbol: form.symbol.trim().toUpperCase(),
+      segment: form.segment,
+      exchange: form.exchange,
+      buy_price: parseFloat(form.buy_price),
+      quantity: parseInt(form.quantity),
+      charges: parseFloat(form.charges || 0),
+      date: form.date,
+      notes: form.notes || "",
+    };
+
+    // F&O extras
+    if (isDerivative(form.segment)) {
+      if (form.strike_price) payload.strike_price = parseFloat(form.strike_price);
+      if (form.expiry_date) payload.expiry_date = form.expiry_date;
+      if (form.lot_size) payload.lot_size = parseInt(form.lot_size);
+    }
+
+    // MF extras
+    if (isMF(form.segment)) {
+      payload.fund_house = form.fund_house || "";
+    }
 
     try {
-      await API.post("trades/", payload);
-      setSuccess("Trade added successfully!");
-      setTimeout(() => navigate("/trades"), 1200);
+      // ✅ Correct endpoint: trades/buy/
+      await API.post("trades/buy/", payload);
+      setSuccess("Buy trade added successfully!");
+      setTimeout(() => navigate("/positions"), 1200);
     } catch (err) {
       if (err.response?.data) {
         setErrors(err.response.data);
@@ -99,8 +105,8 @@ const AddTrade = () => {
       <Navbar />
       <div className="container-fluid px-4 py-4 sf-page">
         <div className="sf-page-header mb-4">
-          <h2 className="sf-page-title">Add Trade</h2>
-          <p className="sf-page-subtitle">Log a new trade to your portfolio</p>
+          <h2 className="sf-page-title">Add Buy Trade</h2>
+          <p className="sf-page-subtitle">Log a new buy entry — you can sell it later from Positions</p>
         </div>
 
         <div className="row justify-content-center">
@@ -128,13 +134,8 @@ const AddTrade = () => {
                   <div className="row g-3">
                     <div className="col-md-4">
                       <label className="form-label sf-label">Segment <span className="text-danger">*</span></label>
-                      <select
-                        name="segment"
-                        className="form-select sf-input"
-                        value={form.segment}
-                        onChange={handleChange}
-                        required
-                      >
+                      <select name="segment" className="form-select sf-input"
+                        value={form.segment} onChange={handleChange} required>
                         {SEGMENTS.map((s) => (
                           <option key={s.value} value={s.value}>{s.label}</option>
                         ))}
@@ -144,13 +145,8 @@ const AddTrade = () => {
 
                     <div className="col-md-4">
                       <label className="form-label sf-label">Exchange <span className="text-danger">*</span></label>
-                      <select
-                        name="exchange"
-                        className="form-select sf-input"
-                        value={form.exchange}
-                        onChange={handleChange}
-                        required
-                      >
+                      <select name="exchange" className="form-select sf-input"
+                        value={form.exchange} onChange={handleChange} required>
                         {EXCHANGES.map((ex) => (
                           <option key={ex} value={ex}>{ex}</option>
                         ))}
@@ -159,22 +155,9 @@ const AddTrade = () => {
                     </div>
 
                     <div className="col-md-4">
-                      <label className="form-label sf-label">Trade Type <span className="text-danger">*</span></label>
-                      <div className="d-flex gap-2 mt-1">
-                        <button
-                          type="button"
-                          className={`btn flex-fill sf-type-btn ${form.trade_type === "buy" ? "sf-type-buy-active" : "sf-type-inactive"}`}
-                          onClick={() => setForm((p) => ({ ...p, trade_type: "buy" }))}
-                        >
-                          <i className="bi bi-arrow-up-circle me-1"></i> Buy
-                        </button>
-                        <button
-                          type="button"
-                          className={`btn flex-fill sf-type-btn ${form.trade_type === "sell" ? "sf-type-sell-active" : "sf-type-inactive"}`}
-                          onClick={() => setForm((p) => ({ ...p, trade_type: "sell" }))}
-                        >
-                          <i className="bi bi-arrow-down-circle me-1"></i> Sell
-                        </button>
+                      <label className="form-label sf-label">Trade Type</label>
+                      <div className="sf-type-btn sf-type-buy-active w-100 text-center py-2" style={{ borderRadius: "8px", fontSize: "0.88rem" }}>
+                        <i className="bi bi-arrow-up-circle me-2"></i>Buy Entry
                       </div>
                     </div>
                   </div>
@@ -190,43 +173,26 @@ const AddTrade = () => {
                       <label className="form-label sf-label">
                         {isMF(form.segment) ? "Fund Name" : "Stock Symbol"} <span className="text-danger">*</span>
                       </label>
-                      <input
-                        type="text"
-                        name="symbol"
-                        className="form-control sf-input"
+                      <input type="text" name="symbol" className="form-control sf-input"
                         placeholder={isMF(form.segment) ? "e.g. Mirae Asset Large Cap" : "e.g. RELIANCE, NIFTY50"}
-                        value={form.symbol}
-                        onChange={handleChange}
-                        required
-                        style={{ textTransform: "uppercase" }}
-                      />
+                        value={form.symbol} onChange={handleChange}
+                        required style={{ textTransform: "uppercase" }} />
                       {fieldError("symbol")}
                     </div>
 
                     <div className="col-md-6">
                       <label className="form-label sf-label">Trade Date <span className="text-danger">*</span></label>
-                      <input
-                        type="date"
-                        name="date"
-                        className="form-control sf-input"
-                        value={form.date}
-                        onChange={handleChange}
-                        required
-                      />
+                      <input type="date" name="date" className="form-control sf-input"
+                        value={form.date} onChange={handleChange} required />
                       {fieldError("date")}
                     </div>
 
                     {isMF(form.segment) && (
                       <div className="col-md-6">
                         <label className="form-label sf-label">Fund House</label>
-                        <input
-                          type="text"
-                          name="fund_house"
-                          className="form-control sf-input"
+                        <input type="text" name="fund_house" className="form-control sf-input"
                           placeholder="e.g. Mirae Asset, SBI MF, HDFC MF"
-                          value={form.fund_house}
-                          onChange={handleChange}
-                        />
+                          value={form.fund_house} onChange={handleChange} />
                       </div>
                     )}
                   </div>
@@ -238,86 +204,46 @@ const AddTrade = () => {
                     <span className="sf-form-step">3</span> Price & Quantity
                   </h6>
                   <div className="row g-3">
-                    <div className="col-md-3">
-                      <label className="form-label sf-label">
-                        {isMF(form.segment) ? "NAV (Buy)" : "Buy Price (₹)"} <span className="text-danger">*</span>
-                      </label>
-                      <input
-                        type="number"
-                        name="buy_price"
-                        className="form-control sf-input"
-                        placeholder="0.00"
-                        value={form.buy_price}
-                        onChange={handleChange}
-                        step="0.01"
-                        min="0"
-                        required
-                      />
+                    <div className="col-md-4">
+                      <label className="form-label sf-label">Buy Price (₹) <span className="text-danger">*</span></label>
+                      <input type="number" name="buy_price" className="form-control sf-input"
+                        placeholder="0.00" value={form.buy_price} onChange={handleChange}
+                        step="0.01" min="0" required />
                       {fieldError("buy_price")}
                     </div>
 
-                    <div className="col-md-3">
-                      <label className="form-label sf-label">
-                        {isMF(form.segment) ? "NAV (Sell)" : "Sell Price (₹)"}
-                        <span className="ms-1 text-muted small">(optional)</span>
-                      </label>
-                      <input
-                        type="number"
-                        name="sell_price"
-                        className="form-control sf-input"
-                        placeholder="0.00"
-                        value={form.sell_price}
-                        onChange={handleChange}
-                        step="0.01"
-                        min="0"
-                      />
-                    </div>
-
-                    <div className="col-md-3">
-                      <label className="form-label sf-label">
-                        {isMF(form.segment) ? "Units" : "Quantity"} <span className="text-danger">*</span>
-                      </label>
-                      <input
-                        type="number"
-                        name="quantity"
-                        className="form-control sf-input"
-                        placeholder="0"
-                        value={form.quantity}
-                        onChange={handleChange}
-                        min="1"
-                        required
-                      />
+                    <div className="col-md-4">
+                      <label className="form-label sf-label">Quantity <span className="text-danger">*</span></label>
+                      <input type="number" name="quantity" className="form-control sf-input"
+                        placeholder="0" value={form.quantity} onChange={handleChange}
+                        min="1" required />
                       {fieldError("quantity")}
                     </div>
 
-                    <div className="col-md-3">
+                    <div className="col-md-4">
                       <label className="form-label sf-label">Charges / Brokerage (₹)</label>
-                      <input
-                        type="number"
-                        name="charges"
-                        className="form-control sf-input"
-                        placeholder="0.00"
-                        value={form.charges}
-                        onChange={handleChange}
-                        step="0.01"
-                        min="0"
-                      />
+                      <input type="number" name="charges" className="form-control sf-input"
+                        placeholder="0.00" value={form.charges} onChange={handleChange}
+                        step="0.01" min="0" />
                     </div>
                   </div>
 
-                  {/* P&L Preview */}
-                  {pl !== null && (
-                    <div className={`sf-pl-preview mt-3 ${parseFloat(pl) >= 0 ? "sf-pl-profit" : "sf-pl-loss"}`}>
-                      <i className={`bi ${parseFloat(pl) >= 0 ? "bi-graph-up-arrow" : "bi-graph-down-arrow"} me-2`}></i>
-                      Estimated P&L: <strong>₹{Number(pl).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</strong>
+                  {/* Invested amount preview */}
+                  {form.buy_price && form.quantity && (
+                    <div className="sf-pl-preview sf-pl-profit mt-3">
+                      <i className="bi bi-wallet2 me-2"></i>
+                      Total Investment: <strong>
+                        ₹{Number(parseFloat(form.buy_price) * parseInt(form.quantity || 0))
+                          .toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                      </strong>
                       {parseFloat(form.charges) > 0 && (
-                        <span className="ms-2 text-muted small">(after ₹{form.charges} charges)</span>
+                        <span className="ms-2 text-muted small">+ ₹{form.charges} charges</span>
                       )}
                     </div>
                   )}
                 </div>
 
-                {/* Section 4 — F&O Fields (conditional) */}
+                {/* Section 4 — F&O Fields */}
                 {isDerivative(form.segment) && (
                   <div className="sf-form-section sf-form-section-highlight">
                     <h6 className="sf-form-section-title">
@@ -326,76 +252,45 @@ const AddTrade = () => {
                     <div className="row g-3">
                       <div className="col-md-4">
                         <label className="form-label sf-label">Strike Price (₹)</label>
-                        <input
-                          type="number"
-                          name="strike_price"
-                          className="form-control sf-input"
-                          placeholder="e.g. 19500"
-                          value={form.strike_price}
-                          onChange={handleChange}
-                          step="0.5"
-                        />
+                        <input type="number" name="strike_price" className="form-control sf-input"
+                          placeholder="e.g. 19500" value={form.strike_price} onChange={handleChange} step="0.5" />
                       </div>
                       <div className="col-md-4">
                         <label className="form-label sf-label">Expiry Date</label>
-                        <input
-                          type="date"
-                          name="expiry_date"
-                          className="form-control sf-input"
-                          value={form.expiry_date}
-                          onChange={handleChange}
-                        />
+                        <input type="date" name="expiry_date" className="form-control sf-input"
+                          value={form.expiry_date} onChange={handleChange} />
                       </div>
                       <div className="col-md-4">
                         <label className="form-label sf-label">Lot Size</label>
-                        <input
-                          type="number"
-                          name="lot_size"
-                          className="form-control sf-input"
-                          placeholder="e.g. 50"
-                          value={form.lot_size}
-                          onChange={handleChange}
-                          min="1"
-                        />
+                        <input type="number" name="lot_size" className="form-control sf-input"
+                          placeholder="e.g. 50" value={form.lot_size} onChange={handleChange} min="1" />
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Section 5 — Notes */}
+                {/* Section Notes */}
                 <div className="sf-form-section">
                   <h6 className="sf-form-section-title">
                     <span className="sf-form-step">{isDerivative(form.segment) ? "5" : "4"}</span> Notes
                     <span className="ms-2 text-muted small fw-normal">(optional)</span>
                   </h6>
-                  <textarea
-                    name="notes"
-                    className="form-control sf-input"
-                    rows="3"
-                    placeholder="Trade rationale, observations, strategy used..."
-                    value={form.notes}
-                    onChange={handleChange}
-                  ></textarea>
+                  <textarea name="notes" className="form-control sf-input" rows="3"
+                    placeholder="Why are you buying? Strategy, observations..."
+                    value={form.notes} onChange={handleChange}></textarea>
                 </div>
 
                 {/* Actions */}
                 <div className="d-flex gap-3 mt-4">
-                  <button
-                    type="submit"
-                    className="btn sf-btn-primary flex-fill"
-                    disabled={loading}
-                  >
+                  <button type="submit" className="btn sf-btn-primary flex-fill" disabled={loading}>
                     {loading ? (
                       <><span className="spinner-border spinner-border-sm me-2"></span>Saving...</>
                     ) : (
-                      <><i className="bi bi-plus-circle me-2"></i>Add Trade</>
+                      <><i className="bi bi-plus-circle me-2"></i>Add Buy Trade</>
                     )}
                   </button>
-                  <button
-                    type="button"
-                    className="btn sf-btn-ghost"
-                    onClick={() => navigate("/trades")}
-                  >
+                  <button type="button" className="btn sf-btn-ghost"
+                    onClick={() => navigate("/positions")}>
                     Cancel
                   </button>
                 </div>

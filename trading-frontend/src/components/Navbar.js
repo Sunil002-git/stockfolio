@@ -14,73 +14,56 @@ const Navbar = () => {
 
   const isActive = (path) => location.pathname === path;
 
+  const navLinks = [
+    { to: "/dashboard",    icon: "speedometer2",  label: "Dashboard" },
+    { to: "/positions",    icon: "layers",         label: "Positions" },
+    { to: "/add-trade",    icon: "plus-circle",    label: "Add Buy" },
+    { to: "/history",      icon: "clock-history",  label: "History" },
+    { to: "/transactions", icon: "bank",           label: "Funds" },
+    { to: "/analytics",    icon: "bar-chart-line", label: "Analytics" },
+  ];
+
   return (
     <nav className="navbar navbar-expand-lg sticky-top sf-navbar">
       <div className="container-fluid px-4">
-        {/* Brand */}
         <Link className="navbar-brand sf-brand" to="/dashboard">
           <span className="sf-brand-icon">📈</span>
-          <span className="sf-brand-text">Stock<span className="sf-brand-accent">folio</span></span>
+          <span className="sf-brand-text">
+            Stock<span className="sf-brand-accent">folio</span>
+          </span>
         </Link>
 
-        {/* Mobile toggle */}
         <button
           className="navbar-toggler border-0"
           type="button"
           data-bs-toggle="collapse"
           data-bs-target="#sfNavbar"
-          aria-expanded="false"
         >
           <span className="navbar-toggler-icon"></span>
         </button>
 
-        {/* Links */}
         <div className="collapse navbar-collapse" id="sfNavbar">
           <ul className="navbar-nav me-auto ms-4 gap-1">
-            <li className="nav-item">
-              <Link
-                className={`nav-link sf-nav-link ${isActive("/dashboard") ? "active" : ""}`}
-                to="/dashboard"
-              >
-                <i className="bi bi-speedometer2 me-1"></i> Dashboard
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link
-                className={`nav-link sf-nav-link ${isActive("/trades") ? "active" : ""}`}
-                to="/trades"
-              >
-                <i className="bi bi-bar-chart-line me-1"></i> Trades
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link
-                className={`nav-link sf-nav-link ${isActive("/add-trade") ? "active" : ""}`}
-                to="/add-trade"
-              >
-                <i className="bi bi-plus-circle me-1"></i> Add Trade
-              </Link>
-            </li>
+            {navLinks.map((link) => (
+              <li className="nav-item" key={link.to}>
+                <Link
+                  className={`nav-link sf-nav-link ${isActive(link.to) ? "active" : ""}`}
+                  to={link.to}
+                >
+                  <i className={`bi bi-${link.icon} me-1`}></i>{link.label}
+                </Link>
+              </li>
+            ))}
           </ul>
 
-          {/* Right controls */}
           <div className="d-flex align-items-center gap-3">
-            {/* Theme Toggle */}
-            <button
-              className="btn sf-theme-toggle"
-              onClick={toggleTheme}
-              title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-            >
-              {theme === "dark" ? (
-                <><i className="bi bi-sun-fill me-1"></i> Light</>
-              ) : (
-                <><i className="bi bi-moon-fill me-1"></i> Dark</>
-              )}
+            <button className="btn sf-theme-toggle" onClick={toggleTheme}>
+              {theme === "dark"
+                ? <><i className="bi bi-sun-fill me-1"></i>Light</>
+                : <><i className="bi bi-moon-fill me-1"></i>Dark</>}
             </button>
-
-            {/* Logout */}
             <button className="btn sf-logout-btn" onClick={handleLogout}>
-              <i className="bi bi-box-arrow-right me-1"></i> Logout
+              <i className="bi bi-box-arrow-right me-1"></i>Logout
             </button>
           </div>
         </div>

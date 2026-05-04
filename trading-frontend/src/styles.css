@@ -666,3 +666,535 @@ body {
   .sf-form-card { padding: 1.4rem 1.2rem; }
   .sf-page-title { font-size: 1.3rem; }
 }
+/* ═══════════════════════════════════════════════════════════
+   STOCKFOLIO — Additional Styles (append to styles.css)
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── Modal ──────────────────────────────────────────────── */
+.sf-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  backdrop-filter: blur(4px);
+}
+
+.sf-modal {
+  background: var(--sf-bg-2);
+  border: 1px solid var(--sf-border);
+  border-radius: 18px;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: modalIn 0.2s ease;
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(-12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.sf-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1.4rem 1.6rem 1rem;
+  border-bottom: 1px solid var(--sf-border);
+}
+
+.sf-modal-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--sf-text);
+  margin: 0 0 0.3rem;
+  display: flex;
+  align-items: center;
+}
+
+.sf-modal-sub {
+  font-size: 0.83rem;
+  color: var(--sf-text-muted);
+}
+
+.sf-modal-close {
+  background: none;
+  border: none;
+  color: var(--sf-text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.2rem;
+  line-height: 1;
+  transition: color var(--sf-transition);
+}
+
+.sf-modal-close:hover { color: var(--sf-danger); }
+
+.sf-modal-body {
+  padding: 1.4rem 1.6rem;
+}
+
+/* ─── Position Cards ─────────────────────────────────────── */
+.sf-position-card {
+  background: var(--sf-bg-2);
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius);
+  overflow: hidden;
+  box-shadow: var(--sf-card-shadow);
+  transition: box-shadow var(--sf-transition);
+}
+
+.sf-position-card:hover {
+  box-shadow: 0 6px 28px rgba(0,0,0,0.3);
+}
+
+.sf-position-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.1rem 1.4rem;
+  cursor: pointer;
+  flex-wrap: wrap;
+  transition: background var(--sf-transition);
+}
+
+.sf-position-header:hover {
+  background: var(--sf-bg-3);
+}
+
+.sf-position-body {
+  padding: 1.2rem 1.4rem;
+  border-top: 1px solid var(--sf-border);
+  background: var(--sf-bg-3);
+}
+
+.sf-pos-stat {
+  text-align: center;
+  min-width: 90px;
+}
+
+.sf-pos-stat-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--sf-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 0.2rem;
+}
+
+.sf-pos-stat-val {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--sf-text);
+  font-family: var(--sf-mono);
+}
+
+.sf-lots-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--sf-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sf-avg-note {
+  font-size: 0.8rem;
+  color: var(--sf-text-muted);
+  padding: 0.5rem 0.75rem;
+  background: rgba(var(--sf-accent-rgb), 0.06);
+  border-radius: var(--sf-radius-sm);
+  border: 1px solid rgba(var(--sf-accent-rgb), 0.15);
+}
+
+/* ─── Status badges ──────────────────────────────────────── */
+.sf-open-pos-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 20px;
+  background: rgba(0, 212, 170, 0.12);
+  color: var(--sf-accent);
+  letter-spacing: 0.3px;
+}
+
+.sf-closed-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 20px;
+  background: var(--sf-bg-4);
+  color: var(--sf-text-muted);
+  letter-spacing: 0.3px;
+}
+
+/* ─── Action buttons ─────────────────────────────────────── */
+.sf-sell-btn {
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  color: var(--sf-danger) !important;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.3rem 0.9rem;
+  border-radius: var(--sf-radius-sm);
+  transition: all var(--sf-transition);
+}
+
+.sf-sell-btn:hover {
+  background: rgba(255, 107, 107, 0.2);
+  border-color: var(--sf-danger);
+  transform: translateY(-1px);
+}
+
+.sf-edit-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--sf-text-muted);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  transition: all var(--sf-transition);
+}
+
+.sf-edit-btn:hover {
+  background: rgba(var(--sf-accent-rgb), 0.1);
+  border-color: var(--sf-accent);
+  color: var(--sf-accent) !important;
+}
+
+/* ─── Analytics period buttons ───────────────────────────── */
+.btn-sm.sf-btn-primary {
+  padding: 0.3rem 0.9rem;
+  font-size: 0.83rem;
+}
+
+.btn-sm.sf-btn-ghost {
+  padding: 0.3rem 0.9rem;
+  font-size: 0.83rem;
+}
+/* ═══════════════════════════════════════════════════════════
+   STOCKFOLIO — Update 3 CSS additions
+   Append these to the bottom of styles.css
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── Balance pill (header) ──────────────────────────────── */
+.sf-balance-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  background: var(--sf-bg-2);
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius);
+  padding: 0.6rem 1.2rem;
+  box-shadow: var(--sf-card-shadow);
+}
+.sf-balance-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--sf-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.sf-balance-val {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-family: var(--sf-mono);
+  letter-spacing: -0.5px;
+}
+
+/* ─── Tabs ───────────────────────────────────────────────── */
+.sf-tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--sf-border);
+  padding-bottom: 0;
+}
+.sf-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--sf-text-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.6rem 1.1rem;
+  cursor: pointer;
+  transition: all var(--sf-transition);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: -1px;
+}
+.sf-tab:hover { color: var(--sf-text); }
+.sf-tab.active {
+  color: var(--sf-accent);
+  border-bottom-color: var(--sf-accent);
+}
+.sf-tab-count {
+  background: var(--sf-bg-4);
+  color: var(--sf-text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+/* ─── Activity Feed ──────────────────────────────────────── */
+.sf-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+}
+.sf-feed::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--sf-border);
+  z-index: 0;
+}
+.sf-feed-item {
+  display: flex;
+  gap: 1.2rem;
+  padding-bottom: 1.2rem;
+  position: relative;
+  z-index: 1;
+}
+.sf-feed-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 0.9rem;
+  border: 3px solid var(--sf-bg);
+  z-index: 2;
+}
+.sf-dot-buy  { background: var(--sf-accent); }
+.sf-dot-sell { background: var(--sf-danger); }
+
+.sf-feed-card {
+  flex: 1;
+  background: var(--sf-bg-2);
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius);
+  padding: 1rem 1.2rem;
+  box-shadow: var(--sf-card-shadow);
+  transition: box-shadow var(--sf-transition);
+}
+.sf-feed-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.25); }
+
+.sf-feed-sell .sf-feed-card { border-left: 3px solid rgba(255,107,107,0.4); }
+.sf-feed-buy  .sf-feed-card { border-left: 3px solid rgba(0,212,170,0.4); }
+
+.sf-feed-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Stats row inside feed card */
+.sf-feed-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+}
+.sf-feed-stat { min-width: 80px; }
+.sf-feed-stat-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--sf-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 0.15rem;
+}
+.sf-feed-stat-val {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--sf-text);
+  font-family: var(--sf-mono);
+}
+.sf-feed-stat-balance {
+  margin-left: auto;
+  padding-left: 1rem;
+  border-left: 1px solid var(--sf-border);
+}
+
+/* Previous trade context banner */
+.sf-prev-trade {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--sf-radius-sm);
+  font-size: 0.83rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+.sf-prev-profit {
+  background: rgba(0,212,170,0.07);
+  border: 1px solid rgba(0,212,170,0.2);
+  color: var(--sf-text);
+}
+.sf-prev-loss {
+  background: rgba(255,107,107,0.07);
+  border: 1px solid rgba(255,107,107,0.2);
+  color: var(--sf-text);
+}
+
+/* Notes in feed card */
+.sf-feed-notes {
+  margin-top: 0.65rem;
+  font-size: 0.82rem;
+  color: var(--sf-text-muted);
+  font-style: italic;
+  border-top: 1px dashed var(--sf-border);
+  padding-top: 0.5rem;
+}
+
+/* ─── Symbol Cards ───────────────────────────────────────── */
+.sf-symbol-card {
+  background: var(--sf-bg-2);
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius);
+  padding: 1.2rem;
+  cursor: pointer;
+  transition: all var(--sf-transition);
+  box-shadow: var(--sf-card-shadow);
+}
+.sf-symbol-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--sf-accent);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+}
+.sf-symbol-pl {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+.sf-symbol-pl span:first-child {
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-family: var(--sf-mono);
+}
+.sf-symbol-pl-label {
+  font-size: 0.75rem;
+  color: var(--sf-text-muted);
+}
+.sf-symbol-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.78rem;
+  color: var(--sf-text-muted);
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+.sf-symbol-card-hint {
+  font-size: 0.75rem;
+  color: var(--sf-text-subtle);
+  margin-top: 0.4rem;
+}
+.sf-outcome-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 20px;
+}
+.sf-outcome-profit {
+  background: rgba(0,212,170,0.12);
+  color: var(--sf-accent);
+}
+.sf-outcome-loss {
+  background: rgba(255,107,107,0.12);
+  color: var(--sf-danger);
+}
+
+/* ─── Balance Breakdown (Dashboard) ─────────────────────── */
+.sf-balance-breakdown { display: flex; flex-direction: column; gap: 0; }
+.sf-bb-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--sf-border);
+  font-size: 0.9rem;
+  color: var(--sf-text);
+}
+.sf-bb-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--sf-text);
+}
+
+/* ─── Quick links (Dashboard) ────────────────────────────── */
+.sf-quick-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--sf-bg-2);
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius);
+  padding: 1rem 1.2rem;
+  text-decoration: none;
+  color: var(--sf-text);
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all var(--sf-transition);
+  box-shadow: var(--sf-card-shadow);
+}
+.sf-quick-link i { font-size: 1.2rem; color: var(--sf-accent); }
+.sf-quick-link:hover {
+  border-color: var(--sf-accent);
+  transform: translateY(-2px);
+  color: var(--sf-text);
+}
+
+/* ─── Sell Result screen ─────────────────────────────────── */
+.sf-result-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+.sf-result-item {
+  background: var(--sf-bg-3);
+  border-radius: var(--sf-radius-sm);
+  padding: 0.75rem 1rem;
+  text-align: left;
+}
+.sf-result-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--sf-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.3rem;
+}
+.sf-result-val {
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: var(--sf-mono);
+  color: var(--sf-text);
+}
+.sf-balance-after-sell {
+  background: var(--sf-bg-3);
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius-sm);
+  padding: 0.6rem 1rem;
+  font-size: 0.88rem;
+  color: var(--sf-text-muted);
+  display: inline-block;
+}
+
+/* Win rate count card */
+.sf-count-win  { border-top: 3px solid var(--sf-accent); }
+.sf-count-lose { border-top: 3px solid var(--sf-danger); }

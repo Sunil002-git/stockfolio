@@ -4,8 +4,11 @@ import { ThemeProvider } from "./context/ThemeContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
-import Trades from "./pages/Trades";
+import Positions from "./pages/Positions";
 import AddTrade from "./pages/AddTrade";
+import Transactions from "./pages/Transactions";
+import Analytics from "./pages/Analytics";
+import TradeHistory from "./pages/TradeHistory";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
@@ -29,8 +32,11 @@ function App() {
           <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
           <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-          <Route path="/trades" element={<PrivateRoute><Trades /></PrivateRoute>} />
+          <Route path="/positions" element={<PrivateRoute><Positions /></PrivateRoute>} />
           <Route path="/add-trade" element={<PrivateRoute><AddTrade /></PrivateRoute>} />
+          <Route path="/transactions" element={<PrivateRoute><Transactions /></PrivateRoute>} />
+          <Route path="/analytics" element={<PrivateRoute><Analytics /></PrivateRoute>} />
+          <Route path="/history" element={<PrivateRoute><TradeHistory /></PrivateRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

@@ -123,7 +123,7 @@ USE_TZ = True
 STATIC_URL = 'static/'
 # sunil
 # sunil@admin.com
-#sunil123
+# sunil123
 
 AUTH_USER_MODEL = 'core.User'
 
