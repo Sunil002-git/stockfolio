@@ -9,5 +9,13 @@ PyJWT==2.12.1
 sqlparse==0.5.5
 tzdata==2026.1
 whitenoise==6.12.0
-numpy==1.23.5
-tensorflow==2.10.0
+
+# Data / ML — required by prediction_view.py (were missing!)
+numpy>=1.26,<2.0
+pandas>=2.0
+scikit-learn>=1.3
+yfinance>=0.2.40
+
+# TensorFlow: upgraded from 2.10 → 2.15 for Python 3.10 compatibility
+# (TF 2.10 crashes on Python 3.10+ with numpy>=1.24)
+tensorflow==2.15.0
