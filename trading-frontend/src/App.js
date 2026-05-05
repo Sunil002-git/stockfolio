@@ -1,3 +1,12 @@
+// App.js — add this import and route to your existing App.js
+
+// ADD this import:
+// import Predict from "./pages/Predict";
+
+// ADD this route inside <Routes>:
+// <Route path="/predict" element={<PrivateRoute><Predict /></PrivateRoute>} />
+
+// ─── Full updated App.js ──────────────────────────────────
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./context/ThemeContext";
@@ -9,6 +18,7 @@ import AddTrade from "./pages/AddTrade";
 import Transactions from "./pages/Transactions";
 import Analytics from "./pages/Analytics";
 import TradeHistory from "./pages/TradeHistory";
+import Predict from "./pages/Predict";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
@@ -18,7 +28,6 @@ const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem("token");
   return token ? children : <Navigate to="/" replace />;
 };
-
 const PublicRoute = ({ children }) => {
   const token = localStorage.getItem("token");
   return token ? <Navigate to="/dashboard" replace /> : children;
@@ -37,6 +46,7 @@ function App() {
           <Route path="/transactions" element={<PrivateRoute><Transactions /></PrivateRoute>} />
           <Route path="/analytics" element={<PrivateRoute><Analytics /></PrivateRoute>} />
           <Route path="/history" element={<PrivateRoute><TradeHistory /></PrivateRoute>} />
+          <Route path="/predict" element={<PrivateRoute><Predict /></PrivateRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

@@ -6,6 +6,7 @@ from .views import (
     TradeGroupViewSet, TransactionViewSet,
     DashboardView, AnalyticsView, TradeHistoryView,
 )
+from .prediction_view import StockPredictionView
 
 router = DefaultRouter()
 router.register(r'positions', TradeGroupViewSet, basename='position')
@@ -20,4 +21,7 @@ urlpatterns = [
     path('trades/history/', TradeHistoryView.as_view(), name='trade-history'),
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('analytics/', AnalyticsView.as_view(), name='analytics'),
+
+    # ── Prediction ──────────────────────────────────────────
+    path('predict/', StockPredictionView.as_view(), name='predict'),
 ]

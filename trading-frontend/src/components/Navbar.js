@@ -15,12 +15,13 @@ const Navbar = () => {
   const isActive = (path) => location.pathname === path;
 
   const navLinks = [
-    { to: "/dashboard",    icon: "speedometer2",  label: "Dashboard" },
-    { to: "/positions",    icon: "layers",         label: "Positions" },
-    { to: "/add-trade",    icon: "plus-circle",    label: "Add Buy" },
-    { to: "/history",      icon: "clock-history",  label: "History" },
-    { to: "/transactions", icon: "bank",           label: "Funds" },
-    { to: "/analytics",    icon: "bar-chart-line", label: "Analytics" },
+    { to: "/dashboard",    icon: "speedometer2",   label: "Dashboard" },
+    { to: "/positions",    icon: "layers",          label: "Positions" },
+    { to: "/add-trade",    icon: "plus-circle",     label: "Add Buy" },
+    { to: "/history",      icon: "clock-history",   label: "History" },
+    { to: "/transactions", icon: "bank",            label: "Funds" },
+    { to: "/analytics",    icon: "bar-chart-line",  label: "Analytics" },
+    { to: "/predict",      icon: "cpu",             label: "Predict" },
   ];
 
   return (
@@ -50,7 +51,11 @@ const Navbar = () => {
                   className={`nav-link sf-nav-link ${isActive(link.to) ? "active" : ""}`}
                   to={link.to}
                 >
-                  <i className={`bi bi-${link.icon} me-1`}></i>{link.label}
+                  <i className={`bi bi-${link.icon} me-1`}></i>
+                  {link.label}
+                  {link.to === "/predict" && (
+                    <span className="sf-ai-badge ms-1">AI</span>
+                  )}
                 </Link>
               </li>
             ))}

@@ -1198,3 +1198,143 @@ body {
 /* Win rate count card */
 .sf-count-win  { border-top: 3px solid var(--sf-accent); }
 .sf-count-lose { border-top: 3px solid var(--sf-danger); }
+
+/* Add this to styles.css — AI badge on Predict nav link */
+.sf-ai-badge {
+  font-size: 0.6rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--sf-accent), #4d9fff);
+  color: #0d1117;
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+  vertical-align: middle;
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   STOCKFOLIO — Prediction page CSS
+   Append to bottom of styles.css
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── Signal card ────────────────────────────────────────── */
+.sf-signal-card {
+  border-radius: var(--sf-radius);
+  padding: 1.2rem 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  height: 100%;
+}
+.sf-signal-icon { font-size: 2.5rem; line-height: 1; flex-shrink: 0; }
+.sf-signal-label {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+  font-family: var(--sf-mono);
+  line-height: 1;
+  margin-bottom: 0.2rem;
+}
+.sf-signal-desc {
+  font-size: 0.78rem;
+  color: var(--sf-text-muted);
+  margin-bottom: 0.3rem;
+}
+.sf-signal-pct {
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: var(--sf-mono);
+}
+
+/* ─── Chart legend dots ──────────────────────────────────── */
+.sf-legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+/* ─── Quick predict buttons ──────────────────────────────── */
+.sf-quick-pred-btn {
+  background: var(--sf-bg-3);
+  border: 1px solid var(--sf-border);
+  color: var(--sf-text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  transition: all var(--sf-transition);
+  font-family: var(--sf-mono);
+}
+.sf-quick-pred-btn:hover {
+  border-color: var(--sf-accent);
+  color: var(--sf-accent);
+  background: rgba(var(--sf-accent-rgb), 0.08);
+}
+
+.sf-recent-btn {
+  background: transparent;
+  border: 1px solid var(--sf-border);
+  color: var(--sf-text-muted);
+  font-size: 0.78rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 20px;
+  transition: all var(--sf-transition);
+}
+.sf-recent-btn:hover {
+  border-color: var(--sf-text-muted);
+  color: var(--sf-text);
+}
+
+/* ─── Loading state ──────────────────────────────────────── */
+.sf-pred-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ─── Accuracy grid ──────────────────────────────────────── */
+.sf-accuracy-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+.sf-accuracy-item {
+  background: var(--sf-bg-3);
+  border-radius: var(--sf-radius-sm);
+  padding: 0.75rem 1rem;
+}
+.sf-accuracy-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--sf-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.2rem;
+}
+.sf-accuracy-val {
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: var(--sf-mono);
+  color: var(--sf-text);
+}
+.sf-accuracy-sub {
+  font-size: 0.7rem;
+  color: var(--sf-text-subtle);
+  margin-top: 0.15rem;
+}
+
+/* ─── Disclaimer ─────────────────────────────────────────── */
+.sf-disclaimer {
+  background: rgba(255, 209, 102, 0.08);
+  border: 1px solid rgba(255, 209, 102, 0.25);
+  border-radius: var(--sf-radius-sm);
+  padding: 0.9rem 1rem;
+  font-size: 0.8rem;
+  color: var(--sf-text-muted);
+  line-height: 1.6;
+}
+.sf-disclaimer strong { color: var(--sf-text); }
