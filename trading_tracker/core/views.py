@@ -256,9 +256,11 @@ class TransactionViewSet(viewsets.ModelViewSet):
         type_     = self.request.query_params.get('type')
         from_date = self.request.query_params.get('from_date')
         to_date   = self.request.query_params.get('to_date')
+        broker    = self.request.query_params.get('broker')
         if type_:      qs = qs.filter(type=type_)
         if from_date:  qs = qs.filter(date__gte=from_date)
         if to_date:    qs = qs.filter(date__lte=to_date)
+        if broker:     qs = qs.filter(broker_id=broker)
         return qs
 
     def perform_create(self, serializer):
@@ -272,8 +274,12 @@ class DashboardView(APIView):
 
     def get(self, request):
         user   = request.user
+        broker_id = request.query_params.get('broker')
         groups = TradeGroup.objects.filter(user=user)
         txns   = Transaction.objects.filter(user=user)
+        if broker_id:
+            groups = groups.filter(trades__broker_id=broker_id).distinct()
+            txns   = txns.filter(broker_id=broker_id)
 
         deposits    = txns.filter(type='deposit').aggregate(s=Sum('amount'))['s'] or 0
         withdrawals = txns.filter(type='withdraw').aggregate(s=Sum('amount'))['s'] or 0

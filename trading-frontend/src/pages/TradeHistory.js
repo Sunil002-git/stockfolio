@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import Navbar from "../components/Navbar";
 import API from "../services/api";
+import { useBroker, BrokerSelector } from "../context/BrokerContext";
 
 const SEGMENT_COLORS = {
   equity: "primary", futures: "warning", ce: "success", pe: "danger", mf: "info",
@@ -13,15 +14,13 @@ const fmt = (v) =>
   `₹${Number(v || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
 
 const TradeHistory = () => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("feed"); // feed | symbols
-  const [filters, setFilters] = useState({
-    symbol: "",
-    trade_type: "",
-    segment: "",
-    from_date: "",
-    to_date: "",
+  const { brokerParam, activeBroker, brokers } = useBroker();
+
+  const [data, setData]           = useState(null);
+  const [loading, setLoading]     = useState(true);
+  const [activeTab, setActiveTab] = useState("feed");
+  const [filters, setFilters]     = useState({
+    symbol: "", trade_type: "", segment: "", from_date: "", to_date: "",
   });
   const [symbolSearch, setSymbolSearch] = useState("");
 
@@ -33,12 +32,13 @@ const TradeHistory = () => {
     if (filters.segment)    params.segment    = filters.segment;
     if (filters.from_date)  params.from_date  = filters.from_date;
     if (filters.to_date)    params.to_date    = filters.to_date;
+    if (brokerParam)        params.broker     = brokerParam;
 
     API.get("trades/history/", { params })
       .then((r) => setData(r.data))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [filters]);
+  }, [filters, brokerParam]);
 
   useEffect(() => { fetchHistory(); }, [fetchHistory]);
 
@@ -48,13 +48,16 @@ const TradeHistory = () => {
   const clearFilters = () =>
     setFilters({ symbol: "", trade_type: "", segment: "", from_date: "", to_date: "" });
 
-  const history = data?.history || [];
+  const history         = data?.history || [];
   const symbolSummaries = data?.symbol_summaries || [];
-  const balance = data?.current_balance ?? null;
+  const balance         = data?.current_balance ?? null;
 
   const filteredSymbols = symbolSummaries.filter((s) =>
     s.symbol.toLowerCase().includes(symbolSearch.toLowerCase())
   );
+
+  const activeBrokerName = activeBroker === "all"
+    ? null : brokers.find(b => String(b.id) === activeBroker)?.name;
 
   return (
     <>
@@ -62,10 +65,17 @@ const TradeHistory = () => {
       <div className="container-fluid px-4 py-4 sf-page">
 
         {/* Header */}
-        <div className="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-4">
+        <div className="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-3">
           <div>
             <h2 className="sf-page-title mb-0">Trade History</h2>
-            <p className="sf-page-subtitle mb-0">Full activity feed with balance tracking</p>
+            <p className="sf-page-subtitle mb-0">
+              Full activity feed with balance tracking
+              {activeBrokerName && (
+                <span className="ms-2">
+                  — <span className="sf-broker-tag-inline">{activeBrokerName}</span>
+                </span>
+              )}
+            </p>
           </div>
           {balance !== null && (
             <div className="sf-balance-pill">
@@ -76,6 +86,9 @@ const TradeHistory = () => {
             </div>
           )}
         </div>
+
+        {/* Broker selector */}
+        <BrokerSelector className="mb-4" />
 
         {/* Tabs */}
         <div className="sf-tabs mb-4">
@@ -104,12 +117,9 @@ const TradeHistory = () => {
                 <div className="col-md-2">
                   <label className="sf-label d-block mb-1">Symbol</label>
                   <input
-                    type="text"
-                    name="symbol"
-                    className="form-control sf-input"
+                    type="text" name="symbol" className="form-control sf-input"
                     placeholder="e.g. RELIANCE"
-                    value={filters.symbol}
-                    onChange={handleFilterChange}
+                    value={filters.symbol} onChange={handleFilterChange}
                     style={{ textTransform: "uppercase" }}
                   />
                 </div>
@@ -163,15 +173,19 @@ const TradeHistory = () => {
             {!loading && history.length === 0 && (
               <div className="sf-empty-state">
                 <div className="sf-empty-icon">📋</div>
-                <h5>No trades found</h5>
-                <p className="text-muted">Try adjusting filters or add your first trade.</p>
+                <h5>No trades found{activeBrokerName ? ` for ${activeBrokerName}` : ""}</h5>
+                <p className="text-muted">
+                  {activeBrokerName
+                    ? `Try switching to "All Brokers" or add trades tagged to ${activeBrokerName}.`
+                    : "Try adjusting filters or add your first trade."}
+                </p>
               </div>
             )}
 
             {/* Activity Feed */}
             {!loading && history.length > 0 && (
               <div className="sf-feed">
-                {history.map((item, idx) => (
+                {history.map((item) => (
                   <div key={item.id} className={`sf-feed-item ${item.trade_type === "sell" ? "sf-feed-sell" : "sf-feed-buy"}`}>
 
                     {/* Timeline dot */}
@@ -192,6 +206,12 @@ const TradeHistory = () => {
                           </span>
                           {item.strike_price && (
                             <span className="sf-strike-badge">Strike: ₹{item.strike_price}</span>
+                          )}
+                          {/* ── Broker tag ── */}
+                          {item.broker_name && (
+                            <span className="sf-broker-tag">
+                              <i className="bi bi-building me-1"></i>{item.broker_name}
+                            </span>
                           )}
                         </div>
 
@@ -251,7 +271,7 @@ const TradeHistory = () => {
                         )}
                       </div>
 
-                      {/* Previous trade context — only for sell trades */}
+                      {/* Previous trade context */}
                       {item.trade_type === "sell" && item.previous_trade_context && (
                         <div className={`sf-prev-trade ${item.previous_trade_context.outcome === "profit" ? "sf-prev-profit" : "sf-prev-loss"}`}>
                           <i className={`bi ${item.previous_trade_context.outcome === "profit" ? "bi-trophy" : "bi-exclamation-triangle"} me-2`}></i>
@@ -290,8 +310,7 @@ const TradeHistory = () => {
                   <i className="bi bi-search"></i>
                 </span>
                 <input
-                  type="text"
-                  className="form-control sf-input"
+                  type="text" className="form-control sf-input"
                   placeholder="Search symbol..."
                   value={symbolSearch}
                   onChange={(e) => setSymbolSearch(e.target.value)}
@@ -308,7 +327,7 @@ const TradeHistory = () => {
             {!loading && filteredSymbols.length === 0 && (
               <div className="sf-empty-state">
                 <div className="sf-empty-icon">📊</div>
-                <h5>No symbols found</h5>
+                <h5>No symbols found{activeBrokerName ? ` for ${activeBrokerName}` : ""}</h5>
               </div>
             )}
 

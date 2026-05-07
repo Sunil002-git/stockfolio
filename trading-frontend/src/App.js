@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./context/ThemeContext";
+import { BrokerProvider } from "./context/BrokerContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
@@ -29,21 +30,23 @@ const PublicRoute = ({ children }) => {
 function App() {
   return (
     <ThemeProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/"             element={<PublicRoute><Login /></PublicRoute>} />
-          <Route path="/register"     element={<PublicRoute><Register /></PublicRoute>} />
-          <Route path="/dashboard"    element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-          <Route path="/positions"    element={<PrivateRoute><Positions /></PrivateRoute>} />
-          <Route path="/add-trade"    element={<PrivateRoute><AddTrade /></PrivateRoute>} />
-          <Route path="/transactions" element={<PrivateRoute><Transactions /></PrivateRoute>} />
-          <Route path="/analytics"    element={<PrivateRoute><Analytics /></PrivateRoute>} />
-          <Route path="/history"      element={<PrivateRoute><TradeHistory /></PrivateRoute>} />
-          <Route path="/predict"      element={<PrivateRoute><Predict /></PrivateRoute>} />
-          <Route path="/settings"     element={<PrivateRoute><Settings /></PrivateRoute>} />
-          <Route path="*"             element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+      <BrokerProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/"             element={<PublicRoute><Login /></PublicRoute>} />
+            <Route path="/register"     element={<PublicRoute><Register /></PublicRoute>} />
+            <Route path="/dashboard"    element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+            <Route path="/positions"    element={<PrivateRoute><Positions /></PrivateRoute>} />
+            <Route path="/add-trade"    element={<PrivateRoute><AddTrade /></PrivateRoute>} />
+            <Route path="/transactions" element={<PrivateRoute><Transactions /></PrivateRoute>} />
+            <Route path="/analytics"    element={<PrivateRoute><Analytics /></PrivateRoute>} />
+            <Route path="/history"      element={<PrivateRoute><TradeHistory /></PrivateRoute>} />
+            <Route path="/predict"      element={<PrivateRoute><Predict /></PrivateRoute>} />
+            <Route path="/settings"     element={<PrivateRoute><Settings /></PrivateRoute>} />
+            <Route path="*"             element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </BrokerProvider>
     </ThemeProvider>
   );
 }

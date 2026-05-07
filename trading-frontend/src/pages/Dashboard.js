@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import API from "../services/api";
+import { useBroker, BrokerSelector } from "../context/BrokerContext";
 
 const fmt = (v) =>
   `₹${Number(v || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
@@ -21,33 +22,57 @@ const StatCard = ({ icon, label, value, color, isCurrency = true, suffix = "" })
 );
 
 const Dashboard = () => {
-  const [data, setData] = useState(null);
+  const { brokerParam, activeBroker, brokers } = useBroker();
+  const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError]     = useState("");
 
-  useEffect(() => {
-    API.get("dashboard/")
+  const fetchDashboard = useCallback(() => {
+    setLoading(true);
+    const params = {};
+    if (brokerParam) params.broker = brokerParam;
+    API.get("dashboard/", { params })
       .then((res) => setData(res.data))
       .catch(() => setError("Failed to load dashboard data."))
       .finally(() => setLoading(false));
-  }, []);
+  }, [brokerParam]);
+
+  useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
+
+  const activeBrokerName = activeBroker === "all"
+    ? null
+    : brokers.find(b => String(b.id) === activeBroker)?.name;
 
   const segmentLabels = {
-    equity:  { label: "Equity",   icon: "📊" },
-    futures: { label: "Futures",  icon: "📉" },
-    ce:      { label: "Call (CE)",icon: "📈" },
-    pe:      { label: "Put (PE)", icon: "📉" },
-    mf:      { label: "Mutual Funds", icon: "🏦" },
+    equity:  { label: "Equity",       icon: "📊" },
+    futures: { label: "Futures",       icon: "📉" },
+    ce:      { label: "Call (CE)",     icon: "📈" },
+    pe:      { label: "Put (PE)",      icon: "📉" },
+    mf:      { label: "Mutual Funds",  icon: "🏦" },
   };
 
   return (
     <>
       <Navbar />
       <div className="container-fluid px-4 py-4 sf-page">
-        <div className="sf-page-header mb-4">
-          <h2 className="sf-page-title">Dashboard</h2>
-          <p className="sf-page-subtitle">Your trading overview at a glance</p>
+
+        {/* Header + Broker Selector */}
+        <div className="sf-page-header mb-3">
+          <div>
+            <h2 className="sf-page-title mb-0">Dashboard</h2>
+            <p className="sf-page-subtitle mb-0">
+              Your trading overview
+              {activeBrokerName && (
+                <span className="ms-2">
+                  — <span className="sf-broker-tag-inline">{activeBrokerName}</span>
+                </span>
+              )}
+            </p>
+          </div>
         </div>
+
+        {/* Broker selector bar */}
+        <BrokerSelector className="mb-4" />
 
         {loading && (
           <div className="text-center py-5">
@@ -62,7 +87,7 @@ const Dashboard = () => {
           </div>
         )}
 
-        {data && (
+        {data && !loading && (
           <>
             {/* Main stat cards */}
             <div className="row g-3 mb-4">
@@ -76,13 +101,15 @@ const Dashboard = () => {
               <StatCard icon="🏷️" label="Total Charges Paid" value={data.trade_charges} color="secondary" />
             </div>
 
-            {/* Balance breakdown card */}
+            {/* Balance breakdown */}
             <div className="sf-section-card mb-4">
               <h5 className="sf-section-title mb-3">
                 <i className="bi bi-wallet2 me-2"></i>Balance Breakdown
-                <span className="ms-2 text-muted small fw-normal">
-                  How your balance is calculated
-                </span>
+                {activeBrokerName && (
+                  <span className="ms-2 sf-broker-tag">
+                    <i className="bi bi-building me-1"></i>{activeBrokerName}
+                  </span>
+                )}
               </h5>
               <div className="sf-balance-breakdown">
                 <div className="sf-bb-row">
@@ -100,7 +127,8 @@ const Dashboard = () => {
                   </strong>
                 </div>
                 <div className="sf-bb-row">
-                  <span><i className={`bi ${data.total_realized_pl >= 0 ? "bi-graph-up text-success" : "bi-graph-down text-danger"} me-2`}></i>
+                  <span>
+                    <i className={`bi ${data.total_realized_pl >= 0 ? "bi-graph-up text-success" : "bi-graph-down text-danger"} me-2`}></i>
                     Realized P&L from Sells
                   </span>
                   <strong className={data.total_realized_pl >= 0 ? "text-success" : "text-danger"}>
@@ -165,8 +193,7 @@ const Dashboard = () => {
                           {seg.open} open · {seg.closed} closed
                         </div>
                         <div className={`sf-segment-pl ${seg.profit_loss >= 0 ? "text-success" : "text-danger"}`}>
-                          {seg.profit_loss >= 0 ? "+" : ""}
-                          {fmt(seg.profit_loss)}
+                          {seg.profit_loss >= 0 ? "+" : ""}{fmt(seg.profit_loss)}
                         </div>
                       </div>
                     </div>
@@ -174,7 +201,10 @@ const Dashboard = () => {
                 )}
               </div>
               {Object.values(data.segment_stats || {}).every((s) => s.count === 0) && (
-                <p className="text-muted small mb-0">No trades yet. <Link to="/add-trade" className="sf-auth-link">Add your first trade</Link></p>
+                <p className="text-muted small mb-0">
+                  No trades yet.{" "}
+                  <Link to="/add-trade" className="sf-auth-link">Add your first trade</Link>
+                </p>
               )}
             </div>
 

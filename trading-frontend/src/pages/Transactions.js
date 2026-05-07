@@ -1,48 +1,48 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Navbar from "../components/Navbar";
 import API from "../services/api";
+import { useBroker, BrokerSelector } from "../context/BrokerContext";
 
 const Transactions = () => {
+  const { brokers, brokerParam, activeBroker } = useBroker();
+
   const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]           = useState(true);
   const [form, setForm] = useState({
-    type: "deposit",
-    amount: "",
-    note: "",
+    type: "deposit", amount: "", note: "",
     date: new Date().toISOString().split("T")[0],
+    broker_id: "",
   });
   const [submitting, setSubmitting] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [success, setSuccess] = useState("");
+  const [errors, setErrors]         = useState({});
+  const [success, setSuccess]       = useState("");
   const [filterType, setFilterType] = useState("");
 
-  const fetchTransactions = () => {
+  const fetchTransactions = useCallback(() => {
     setLoading(true);
     const params = {};
-    if (filterType) params.type = filterType;
+    if (filterType)  params.type   = filterType;
+    if (brokerParam) params.broker = brokerParam;
     API.get("transactions/", { params })
       .then((r) => setTransactions(r.data))
       .catch(() => {})
       .finally(() => setLoading(false));
-  };
+  }, [filterType, brokerParam]);
 
-  useEffect(() => { fetchTransactions(); }, [filterType]);
+  useEffect(() => { fetchTransactions(); }, [fetchTransactions]);
 
   const handleChange = (e) =>
     setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitting(true);
-    setErrors({});
-    setSuccess("");
+    setSubmitting(true); setErrors({}); setSuccess("");
+    const payload = { ...form, amount: parseFloat(form.amount) };
+    if (!payload.broker_id) delete payload.broker_id;
     try {
-      await API.post("transactions/", {
-        ...form,
-        amount: parseFloat(form.amount),
-      });
+      await API.post("transactions/", payload);
       setSuccess(`${form.type === "deposit" ? "Deposit" : "Withdrawal"} of ₹${form.amount} recorded!`);
-      setForm({ type: "deposit", amount: "", note: "", date: new Date().toISOString().split("T")[0] });
+      setForm({ type: "deposit", amount: "", note: "", date: new Date().toISOString().split("T")[0], broker_id: "" });
       fetchTransactions();
     } catch (err) {
       setErrors(err.response?.data || {});
@@ -57,21 +57,36 @@ const Transactions = () => {
     fetchTransactions();
   };
 
-  const totalDeposit = transactions.filter(t => t.type === "deposit").reduce((s, t) => s + t.amount, 0);
+  const totalDeposit  = transactions.filter(t => t.type === "deposit").reduce((s, t) => s + t.amount, 0);
   const totalWithdraw = transactions.filter(t => t.type === "withdraw").reduce((s, t) => s + t.amount, 0);
   const net = totalDeposit - totalWithdraw;
+
+  const activeBrokerName = activeBroker === "all"
+    ? null : brokers.find(b => String(b.id) === activeBroker)?.name;
 
   return (
     <>
       <Navbar />
       <div className="container-fluid px-4 py-4 sf-page">
-        <div className="sf-page-header mb-4">
-          <h2 className="sf-page-title">Transactions</h2>
-          <p className="sf-page-subtitle">Manage deposits and withdrawals</p>
+        <div className="sf-page-header mb-3">
+          <div>
+            <h2 className="sf-page-title mb-0">Transactions</h2>
+            <p className="sf-page-subtitle mb-0">
+              Manage deposits and withdrawals
+              {activeBrokerName && (
+                <span className="ms-2">
+                  — <span className="sf-broker-tag-inline">{activeBrokerName}</span>
+                </span>
+              )}
+            </p>
+          </div>
         </div>
 
+        {/* Broker selector */}
+        <BrokerSelector className="mb-4" />
+
         <div className="row g-4">
-          {/* Left: Form */}
+          {/* ── Form ── */}
           <div className="col-lg-4">
             <div className="sf-form-card">
               <h6 className="sf-section-title mb-3">
@@ -81,7 +96,7 @@ const Transactions = () => {
               {success && <div className="alert alert-success py-2 small mb-3">{success}</div>}
 
               <form onSubmit={handleSubmit}>
-                {/* Type toggle */}
+                {/* Type */}
                 <div className="mb-3">
                   <label className="form-label sf-label">Type</label>
                   <div className="d-flex gap-2">
@@ -98,6 +113,7 @@ const Transactions = () => {
                   </div>
                 </div>
 
+                {/* Amount */}
                 <div className="mb-3">
                   <label className="form-label sf-label">Amount (₹) <span className="text-danger">*</span></label>
                   <input type="number" name="amount" className="form-control sf-input"
@@ -106,12 +122,30 @@ const Transactions = () => {
                   {errors.amount && <div className="text-danger small mt-1">{errors.amount[0]}</div>}
                 </div>
 
+                {/* Date */}
                 <div className="mb-3">
                   <label className="form-label sf-label">Date <span className="text-danger">*</span></label>
                   <input type="date" name="date" className="form-control sf-input"
                     value={form.date} onChange={handleChange} required />
                 </div>
 
+                {/* Broker */}
+                {brokers.length > 0 && (
+                  <div className="mb-3">
+                    <label className="form-label sf-label">Broker</label>
+                    <select name="broker_id" className="form-select sf-input"
+                      value={form.broker_id} onChange={handleChange}>
+                      <option value="">— No Broker —</option>
+                      {brokers.map(b => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}{b.account_id ? ` (${b.account_id})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Note */}
                 <div className="mb-4">
                   <label className="form-label sf-label">Note</label>
                   <input type="text" name="note" className="form-control sf-input"
@@ -128,13 +162,13 @@ const Transactions = () => {
               </form>
             </div>
 
-            {/* Summary cards */}
+            {/* Summary */}
             <div className="row g-3 mt-1">
               <div className="col-12">
                 <div className="sf-stat-card sf-stat-success">
                   <div className="sf-stat-icon">💰</div>
                   <div className="sf-stat-body">
-                    <div className="sf-stat-label">Total Deposits</div>
+                    <div className="sf-stat-label">Total Deposits{activeBrokerName ? ` · ${activeBrokerName}` : ""}</div>
                     <div className="sf-stat-value text-success">₹{Number(totalDeposit).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</div>
                   </div>
                 </div>
@@ -143,7 +177,7 @@ const Transactions = () => {
                 <div className="sf-stat-card sf-stat-danger">
                   <div className="sf-stat-icon">💸</div>
                   <div className="sf-stat-body">
-                    <div className="sf-stat-label">Total Withdrawals</div>
+                    <div className="sf-stat-label">Total Withdrawals{activeBrokerName ? ` · ${activeBrokerName}` : ""}</div>
                     <div className="sf-stat-value text-danger">₹{Number(totalWithdraw).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</div>
                   </div>
                 </div>
@@ -160,7 +194,7 @@ const Transactions = () => {
             </div>
           </div>
 
-          {/* Right: History */}
+          {/* ── History ── */}
           <div className="col-lg-8">
             <div className="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
               <h6 className="sf-section-title mb-0">Transaction History</h6>
@@ -177,8 +211,12 @@ const Transactions = () => {
             {!loading && transactions.length === 0 && (
               <div className="sf-empty-state">
                 <div className="sf-empty-icon">🏦</div>
-                <h5>No transactions yet</h5>
-                <p className="text-muted">Add your first deposit to get started.</p>
+                <h5>No transactions{activeBrokerName ? ` for ${activeBrokerName}` : ""}</h5>
+                <p className="text-muted">
+                  {activeBrokerName
+                    ? "Try switching to \"All Brokers\" or add a transaction for this broker."
+                    : "Add your first deposit to get started."}
+                </p>
               </div>
             )}
 
@@ -187,7 +225,12 @@ const Transactions = () => {
                 <table className="table sf-table mb-0">
                   <thead>
                     <tr>
-                      <th>Type</th><th>Date</th><th>Amount</th><th>Note</th><th></th>
+                      <th>Type</th>
+                      <th>Date</th>
+                      <th>Amount</th>
+                      <th>Broker</th>
+                      <th>Note</th>
+                      <th></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -203,6 +246,11 @@ const Transactions = () => {
                           <span className={txn.type === "deposit" ? "sf-profit" : "sf-loss"}>
                             {txn.type === "deposit" ? "+" : "−"}₹{Number(txn.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                           </span>
+                        </td>
+                        <td>
+                          {txn.broker_name
+                            ? <span className="sf-broker-tag"><i className="bi bi-building me-1"></i>{txn.broker_name}</span>
+                            : <span className="text-muted small">—</span>}
                         </td>
                         <td className="text-muted small">{txn.note || "—"}</td>
                         <td>

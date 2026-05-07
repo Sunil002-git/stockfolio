@@ -15,6 +15,10 @@ class Transaction(models.Model):
         ('withdraw', 'Withdraw'),
     )
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transactions')
+    broker = models.ForeignKey(
+        'Broker', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='transactions'
+    )
     type = models.CharField(max_length=10, choices=TRANSACTION_TYPES)
     amount = models.FloatField()
     note = models.CharField(max_length=255, blank=True)

@@ -134,10 +134,18 @@ class SellTradeSerializer(serializers.Serializer):
 # ─── Transaction ─────────────────────────────────────────────────────────────
 
 class TransactionSerializer(serializers.ModelSerializer):
+    broker_name = serializers.SerializerMethodField()
+    broker_id   = serializers.PrimaryKeyRelatedField(
+        queryset=Broker.objects.all(), source='broker', allow_null=True, required=False
+    )
+
     class Meta:
         model = Transaction
-        fields = '__all__'
-        read_only_fields = ('user',)
+        fields = ['id', 'type', 'amount', 'note', 'date', 'created_at', 'broker_id', 'broker_name']
+        read_only_fields = ('user', 'created_at', 'broker_name')
+
+    def get_broker_name(self, obj):
+        return obj.broker.name if obj.broker else None
 
 
 # ─── Journal ─────────────────────────────────────────────────────────────────
