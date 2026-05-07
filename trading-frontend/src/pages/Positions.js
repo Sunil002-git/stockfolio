@@ -4,6 +4,7 @@ import Navbar from "../components/Navbar";
 import SellModal from "../components/SellModal";
 import EditTradeModal from "../components/EditTradeModal";
 import API from "../services/api";
+import { useBroker, BrokerSelector } from "../context/BrokerContext";
 
 const SEGMENT_COLORS = {
   equity: "primary", futures: "warning", ce: "success", pe: "danger", mf: "info",
@@ -13,6 +14,7 @@ const SEGMENT_LABELS = {
 };
 
 const Positions = () => {
+  const { brokerParam } = useBroker();
   const [positions, setPositions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("open"); // open | closed | all
@@ -28,11 +30,12 @@ const Positions = () => {
     const params = {};
     if (filter !== "all") params.is_closed = filter === "closed";
     if (segFilter) params.segment = segFilter;
+    if (brokerParam) params.broker = brokerParam;
     API.get("positions/", { params })
       .then((r) => setPositions(r.data))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [filter, segFilter]);
+  }, [filter, segFilter, brokerParam]);
 
   useEffect(() => { fetchPositions(); }, [fetchPositions]);
 
@@ -76,6 +79,9 @@ const Positions = () => {
             <i className="bi bi-plus-circle me-2"></i>Add Buy
           </Link>
         </div>
+
+        {/* Broker selector */}
+        <BrokerSelector className="mb-3" />
 
         {/* Filters */}
         <div className="sf-filter-bar mb-4">

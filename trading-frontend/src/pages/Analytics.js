@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import Navbar from "../components/Navbar";
 import API from "../services/api";
 import { useTheme } from "../context/ThemeContext";
+import { useBroker, BrokerSelector } from "../context/BrokerContext";
 
 const PERIODS = [
   { key: "week", label: "This Week" },
@@ -14,6 +15,7 @@ const fmt = (v) => `₹${Number(v || 0).toLocaleString("en-IN", { minimumFractio
 
 const Analytics = () => {
   const { theme } = useTheme();
+  const { brokerParam } = useBroker();
   const [period, setPeriod] = useState("month");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -31,11 +33,12 @@ const Analytics = () => {
       params.from_date = fromDate;
       params.to_date = toDate;
     }
+    if (brokerParam) params.broker = brokerParam;
     API.get("analytics/", { params })
       .then((r) => setData(r.data))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [period, fromDate, toDate]);
+  }, [period, fromDate, toDate, brokerParam]);
 
   useEffect(() => {
     if (period !== "custom" || (fromDate && toDate)) {
@@ -175,6 +178,9 @@ const Analytics = () => {
           <h2 className="sf-page-title">Analytics</h2>
           <p className="sf-page-subtitle">P&L trends, monthly summaries, and performance stats</p>
         </div>
+
+        {/* Broker selector */}
+        <BrokerSelector className="mb-4" />
 
         {/* Period selector */}
         <div className="sf-filter-bar mb-4">

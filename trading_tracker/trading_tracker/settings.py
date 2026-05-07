@@ -65,12 +65,19 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWED_ORIGINS = [
+    # Production
     "https://stockfolio-xv8x.onrender.com",
     "https://stockfolio-ecru.vercel.app",
+    # Local development
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
 ]
 CSRF_TRUSTED_ORIGINS = [
     "https://stockfolio-ecru.vercel.app",
     "https://stockfolio-xv8x.onrender.com",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
 ]
 ROOT_URLCONF = 'trading_tracker.urls'
 

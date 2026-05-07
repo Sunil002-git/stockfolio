@@ -35,20 +35,25 @@ class LoginView(TokenObtainPairView):
 
 # ─── Balance helper ───────────────────────────────────────────────────────────
 
-def compute_balance(user):
+def compute_balance(user, broker_id=None):
     """
-    Realistic balance:
-      + All deposits
+    Realistic balance optionally scoped to a single broker.
+      + All deposits  (filtered by broker if given)
       - All withdrawals
       - All buy costs  (buy_price × qty + charges)
       + All sell proceeds (sell_price × qty - charges)
     """
-    transactions = Transaction.objects.filter(user=user)
-    deposits   = transactions.filter(type='deposit').aggregate(s=Sum('amount'))['s'] or 0
-    withdrawals = transactions.filter(type='withdraw').aggregate(s=Sum('amount'))['s'] or 0
+    txns = Transaction.objects.filter(user=user)
+    if broker_id:
+        txns = txns.filter(broker_id=broker_id)
+    deposits   = txns.filter(type='deposit').aggregate(s=Sum('amount'))["s"] or 0
+    withdrawals = txns.filter(type='withdraw').aggregate(s=Sum('amount'))["s"] or 0
 
     buys  = Trade.objects.filter(user=user, trade_type='buy')
     sells = Trade.objects.filter(user=user, trade_type='sell')
+    if broker_id:
+        buys  = buys.filter(broker_id=broker_id)
+        sells = sells.filter(broker_id=broker_id)
 
     buy_cost      = sum((t.buy_price or 0) * t.quantity + t.charges for t in buys)
     sell_proceeds = sum((t.sell_price or 0) * t.quantity - t.charges for t in sells)
@@ -284,22 +289,41 @@ class DashboardView(APIView):
         deposits    = txns.filter(type='deposit').aggregate(s=Sum('amount'))['s'] or 0
         withdrawals = txns.filter(type='withdraw').aggregate(s=Sum('amount'))['s'] or 0
 
+        # Scope trades to broker if selected
+        trades_qs = Trade.objects.filter(user=user)
+        if broker_id:
+            trades_qs = trades_qs.filter(broker_id=broker_id)
+
+        # Rebuild groups list based on which groups have trades under this broker
+        if broker_id:
+            group_ids = trades_qs.values_list('group_id', flat=True).distinct()
+            groups = TradeGroup.objects.filter(id__in=group_ids)
+
         open_groups   = groups.filter(is_closed=False)
         closed_groups = groups.filter(is_closed=True)
 
-        total_realized_pl = sum(g.realized_pl() for g in groups)  # includes partial
-        total_invested    = sum(g.total_invested for g in open_groups)
-        trade_charges     = Trade.objects.filter(user=user).aggregate(s=Sum('charges'))['s'] or 0
+        # P&L and investment — calculated only on broker-scoped trades
+        buys_qs  = trades_qs.filter(trade_type='buy')
+        sells_qs = trades_qs.filter(trade_type='sell')
+        total_invested    = sum((t.buy_price or 0) * t.quantity + t.charges for t in buys_qs.filter(group__is_closed=False))
+        sell_proceeds     = sum((t.sell_price or 0) * t.quantity for t in sells_qs)
+        sell_costs        = sum(
+            (t.avg_cost or 0) * t.quantity
+            for t in sells_qs
+            if hasattr(t, 'avg_cost')
+        )
+        total_realized_pl = sum(g.realized_pl() for g in groups)
+        trade_charges     = trades_qs.aggregate(s=Sum('charges'))['s'] or 0
 
-        balance = compute_balance(user)
+        balance = compute_balance(user, broker_id=broker_id)
 
         # Win/loss rate
         closed_list = list(closed_groups)
-        winning = sum(1 for g in closed_list if g.realized_pl() > 0)
-        losing  = sum(1 for g in closed_list if g.realized_pl() < 0)
+        winning  = sum(1 for g in closed_list if g.realized_pl() > 0)
+        losing   = sum(1 for g in closed_list if g.realized_pl() < 0)
         win_rate = round(winning / len(closed_list) * 100, 1) if closed_list else 0
 
-        # Segment breakdown
+        # Segment breakdown — scoped to broker
         segment_stats = {}
         for seg_key, seg_label in TradeGroup._meta.get_field('segment').choices:
             seg_groups = groups.filter(segment=seg_key)
@@ -314,8 +338,8 @@ class DashboardView(APIView):
 
         return Response({
             "balance": balance,
-            "total_deposit": deposits,
-            "total_withdraw": withdrawals,
+            "total_deposit": round(deposits, 2),
+            "total_withdraw": round(withdrawals, 2),
             "total_realized_pl": round(total_realized_pl, 2),
             "total_invested": round(total_invested, 2),
             "trade_charges": round(trade_charges, 2),
@@ -326,6 +350,7 @@ class DashboardView(APIView):
             "winning_trades": winning,
             "losing_trades": losing,
             "segment_stats": segment_stats,
+            "broker_id": broker_id,
         })
 
 
@@ -460,7 +485,7 @@ class TradeHistoryView(APIView):
         return Response({
             'history': history,
             'symbol_summaries': symbol_summaries,
-            'current_balance': compute_balance(user),
+            'current_balance': compute_balance(user, broker_id=broker),
         })
 
 
@@ -484,12 +509,15 @@ class AnalyticsView(APIView):
         period    = request.query_params.get('period', 'year')
         from_date = request.query_params.get('from_date')
         to_date   = request.query_params.get('to_date')
+        broker_id = request.query_params.get('broker')
         start, end = get_date_range(period, from_date, to_date)
 
         sell_trades = Trade.objects.filter(
             user=user, trade_type='sell',
             date__gte=start, date__lte=end,
         ).select_related('group').order_by('date')
+        if broker_id:
+            sell_trades = sell_trades.filter(broker_id=broker_id)
 
         daily_pl = {}
         for trade in sell_trades:
@@ -528,6 +556,8 @@ class AnalyticsView(APIView):
         worst_day    = min(daily_list, key=lambda x: x['profit_loss']) if daily_list else None
 
         txns       = Transaction.objects.filter(user=user, date__gte=start, date__lte=end)
+        if broker_id:
+            txns = txns.filter(broker_id=broker_id)
         deposits   = txns.filter(type='deposit').aggregate(s=Sum('amount'))['s'] or 0
         withdrawals = txns.filter(type='withdraw').aggregate(s=Sum('amount'))['s'] or 0
 
