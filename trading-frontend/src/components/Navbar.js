@@ -22,6 +22,7 @@ const Navbar = () => {
     { to: "/transactions", icon: "bank",            label: "Funds" },
     { to: "/analytics",    icon: "bar-chart-line",  label: "Analytics" },
     { to: "/predict",      icon: "cpu",             label: "Predict" },
+    { to: "/settings",     icon: "gear",            label: "Settings" },
   ];
 
   return (

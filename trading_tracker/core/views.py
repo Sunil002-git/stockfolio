@@ -7,8 +7,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .models import Journal, Trade, TradeGroup, Transaction, User
+from .models import Broker, Journal, Trade, TradeGroup, Transaction, User, UserSettings
 from .serializers import (
+    BrokerSerializer,
     BuyTradeSerializer,
     JournalSerializer,
     RegisterSerializer,
@@ -17,6 +18,7 @@ from .serializers import (
     TradeGroupSummarySerializer,
     TradeSerializer,
     TransactionSerializer,
+    UserSettingsSerializer,
 )
 
 
@@ -89,9 +91,19 @@ class BuyTradeView(APIView):
             }
         )
 
+        # Resolve broker
+        broker = None
+        broker_id = data.get('broker_id')
+        if broker_id:
+            try:
+                broker = Broker.objects.get(pk=broker_id, user=user)
+            except Broker.DoesNotExist:
+                pass
+
         trade = Trade.objects.create(
             user=user,
             group=group,
+            broker=broker,
             trade_type='buy',
             buy_price=data['buy_price'],
             quantity=data['quantity'],
@@ -188,12 +200,15 @@ class TradeGroupViewSet(viewsets.ReadOnlyModelViewSet):
         is_closed = self.request.query_params.get('is_closed')
         segment   = self.request.query_params.get('segment')
         exchange  = self.request.query_params.get('exchange')
+        broker = self.request.query_params.get('broker')
         if is_closed is not None:
             qs = qs.filter(is_closed=is_closed.lower() == 'true')
         if segment:
             qs = qs.filter(segment=segment)
         if exchange:
             qs = qs.filter(exchange=exchange)
+        if broker:
+            qs = qs.filter(trades__broker_id=broker).distinct()
         return qs
 
     def get_serializer_class(self):
@@ -323,11 +338,13 @@ class TradeHistoryView(APIView):
 
         trades = Trade.objects.filter(user=user).select_related('group').order_by('-date', '-created_at')
 
+        broker    = request.query_params.get('broker')
         if symbol:     trades = trades.filter(group__symbol=symbol)
         if trade_type: trades = trades.filter(trade_type=trade_type)
         if from_date:  trades = trades.filter(date__gte=from_date)
         if to_date:    trades = trades.filter(date__lte=to_date)
         if segment:    trades = trades.filter(group__segment=segment)
+        if broker:     trades = trades.filter(broker_id=broker)
 
         # Build activity list with running balance
         # First get all events (trades + transactions) sorted by date for running balance
@@ -411,6 +428,8 @@ class TradeHistoryView(APIView):
                 'previous_trade_context': prev_context,
                 'group_id': group.id if group else None,
                 'strike_price': group.strike_price if group else None,
+                'broker_id': trade.broker_id,
+                'broker_name': trade.broker.name if trade.broker else None,
             })
 
         # Stock-specific summary: unique symbols traded
@@ -523,3 +542,41 @@ class AnalyticsView(APIView):
                 'withdrawals': withdrawals,
             }
         })
+
+
+# ─── Broker ───────────────────────────────────────────────────────────────────
+
+class BrokerViewSet(viewsets.ModelViewSet):
+    serializer_class = BrokerSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = Broker.objects.filter(user=self.request.user)
+        if self.request.query_params.get('active_only') == 'true':
+            qs = qs.filter(is_active=True)
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+# ─── UserSettings ─────────────────────────────────────────────────────────────
+
+class UserSettingsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def _get_or_create(self, user):
+        settings_obj, _ = UserSettings.objects.get_or_create(user=user)
+        return settings_obj
+
+    def get(self, request):
+        obj = self._get_or_create(request.user)
+        return Response(UserSettingsSerializer(obj).data)
+
+    def patch(self, request):
+        obj = self._get_or_create(request.user)
+        serializer = UserSettingsSerializer(obj, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

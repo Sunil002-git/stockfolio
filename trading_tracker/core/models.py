@@ -111,6 +111,10 @@ class Trade(models.Model):
         TradeGroup, on_delete=models.CASCADE,
         related_name='trades', null=True, blank=True
     )
+    broker = models.ForeignKey(
+        'Broker', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='trades'
+    )
 
     trade_type = models.CharField(max_length=10, choices=TRADE_TYPES, default='buy')
 
@@ -151,3 +155,33 @@ class Journal(models.Model):
 
     def __str__(self):
         return f"Journal for {self.trade}"
+
+
+class Broker(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='brokers')
+    name = models.CharField(max_length=100)  # e.g. "Zerodha", "Groww"
+    account_id = models.CharField(max_length=100, blank=True)  # optional account number
+    notes = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+        unique_together = ('user', 'name')
+
+    def __str__(self):
+        return f"{self.name} ({self.user.username})"
+
+
+class UserSettings(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='settings')
+    # Prediction date range
+    predict_from_date = models.DateField(null=True, blank=True)   # None = auto (10 yrs)
+    predict_to_date   = models.DateField(null=True, blank=True)   # None = today
+    # UI preferences (extensible)
+    default_exchange  = models.CharField(max_length=10, default='NSE')
+    default_segment   = models.CharField(max_length=10, default='equity')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Settings for {self.user.username}"

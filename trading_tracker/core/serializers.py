@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
-from .models import Trade, TradeGroup, Transaction, Journal, User
+from .models import Trade, TradeGroup, Transaction, Journal, User, Broker, UserSettings
 
 
 # ─── Auth ────────────────────────────────────────────────────────────────────
@@ -146,3 +146,26 @@ class JournalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Journal
         fields = '__all__'
+
+
+# ─── Broker ──────────────────────────────────────────────────────────────────
+
+class BrokerSerializer(serializers.ModelSerializer):
+    trade_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Broker
+        fields = ['id', 'name', 'account_id', 'notes', 'is_active', 'created_at', 'trade_count']
+        read_only_fields = ('user', 'created_at')
+
+    def get_trade_count(self, obj):
+        return obj.trades.count()
+
+
+# ─── UserSettings ─────────────────────────────────────────────────────────────
+
+class UserSettingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserSettings
+        fields = ['predict_from_date', 'predict_to_date', 'default_exchange', 'default_segment', 'updated_at']
+        read_only_fields = ('updated_at',)

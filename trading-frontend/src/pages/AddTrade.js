@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import API from "../services/api";
@@ -11,6 +11,7 @@ const initialForm = {
   quantity: "",
   charges: "",
   date: new Date().toISOString().split("T")[0],
+  broker_id: "",
   // F&O fields
   strike_price: "",
   expiry_date: "",
@@ -39,7 +40,24 @@ const AddTrade = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState("");
+  const [brokers, setBrokers] = useState([]);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Load user settings for defaults and brokers list
+    Promise.all([
+      API.get("settings/"),
+      API.get("brokers/", { params: { active_only: "true" } }),
+    ]).then(([sRes, bRes]) => {
+      const s = sRes.data;
+      setForm(prev => ({
+        ...prev,
+        exchange: s.default_exchange || prev.exchange,
+        segment:  s.default_segment  || prev.segment,
+      }));
+      setBrokers(bRes.data);
+    }).catch(() => {});
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -64,6 +82,7 @@ const AddTrade = () => {
       date: form.date,
       notes: form.notes || "",
     };
+    if (form.broker_id) payload.broker_id = parseInt(form.broker_id);
 
     // F&O extras
     if (isDerivative(form.segment)) {
@@ -269,10 +288,26 @@ const AddTrade = () => {
                   </div>
                 )}
 
+                {/* Section Broker */}
+                {brokers.length > 0 && (
+                  <div className="sf-form-section">
+                    <h6 className="sf-form-section-title">
+                      <span className="sf-form-step">{isDerivative(form.segment) ? "5" : "4"}</span> Broker
+                      <span className="ms-2 text-muted small fw-normal">(optional)</span>
+                    </h6>
+                    <select name="broker_id" className="form-select sf-input" value={form.broker_id} onChange={handleChange}>
+                      <option value="">— Select Broker —</option>
+                      {brokers.map(b => (
+                        <option key={b.id} value={b.id}>{b.name}{b.account_id ? " (" + b.account_id + ")" : ""}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 {/* Section Notes */}
                 <div className="sf-form-section">
                   <h6 className="sf-form-section-title">
-                    <span className="sf-form-step">{isDerivative(form.segment) ? "5" : "4"}</span> Notes
+                    <span className="sf-form-step">{isDerivative(form.segment) ? (brokers.length > 0 ? "6" : "5") : (brokers.length > 0 ? "5" : "4")}</span> Notes
                     <span className="ms-2 text-muted small fw-normal">(optional)</span>
                   </h6>
                   <textarea name="notes" className="form-control sf-input" rows="3"
