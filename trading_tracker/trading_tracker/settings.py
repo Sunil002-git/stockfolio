@@ -28,6 +28,7 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = [
     '.onrender.com',
+    'stockfolio-xv8x.onrender.com',
     'localhost',
     '127.0.0.1',
 ]
@@ -61,7 +62,10 @@ MIDDLEWARE = [
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = [
+    "https://stockfolio-xv8x.onrender.com",
+]
 
 ROOT_URLCONF = 'trading_tracker.urls'
 
@@ -143,3 +147,7 @@ REST_FRAMEWORK = {
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://stockfolio-xv8x.onrender.com",
+]
