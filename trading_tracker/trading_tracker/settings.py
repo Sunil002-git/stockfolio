@@ -66,8 +66,12 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWED_ORIGINS = [
     "https://stockfolio-xv8x.onrender.com",
+    "https://stockfolio-ecru.vercel.app",
 ]
-
+CSRF_TRUSTED_ORIGINS = [
+    "https://stockfolio-ecru.vercel.app",
+    "https://stockfolio-xv8x.onrender.com",
+]
 ROOT_URLCONF = 'trading_tracker.urls'
 
 TEMPLATES = [
@@ -150,8 +154,6 @@ REST_FRAMEWORK = {
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-CSRF_TRUSTED_ORIGINS = [
-    "https://stockfolio-xv8x.onrender.com",
-]
+
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
