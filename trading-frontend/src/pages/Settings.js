@@ -17,10 +17,25 @@ const Settings = () => {
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
   const [showBrokerForm, setShowBrokerForm] = useState(false);
+  const [isAdmin, setIsAdmin]         = useState(() => localStorage.getItem('is_superuser') === 'true');
+  const [emailCfg, setEmailCfg]       = useState({ host:'smtp.gmail.com', port:587, from_email:'', email_name:'', password:'', is_active:true });
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [emailMsg, setEmailMsg]       = useState({ type:'', text:'' });
+  const [testingEmail, setTestingEmail] = useState(false);
 
   useEffect(() => {
-    Promise.all([API.get("settings/"), API.get("brokers/")])
-      .then(([sRes, bRes]) => {
+    // Verify superuser status from server on every load
+    API.get('profile/').then(r => {
+      const admin = !!(r.data.is_staff || r.data.is_superuser);
+      setIsAdmin(admin);
+      localStorage.setItem('is_superuser', admin ? 'true' : 'false');
+    }).catch(() => {});
+
+    Promise.all([API.get("settings/"), API.get("brokers/"), API.get("email-config/")])
+      .then(([sRes, bRes, eRes]) => {
+        if (eRes.data && eRes.data.host) {
+          setEmailCfg(p => ({ ...p, ...eRes.data, password: '' }));
+        }
         const s = sRes.data;
         setSettings({
           predict_from_date: s.predict_from_date || "",
@@ -346,6 +361,120 @@ const Settings = () => {
               )}
             </div>
           </div>
+
+          {/* ── Email Configuration (superuser only) ── */}
+          {isAdmin && <div className="col-12">
+              <div className="sf-section-card">
+                <h5 className="sf-section-title mb-1">
+                  <i className="bi bi-envelope-gear me-2"></i>Email Configuration
+                </h5>
+                <p className="text-muted small mb-4">
+                  Configure SMTP settings for sending OTP emails (registration & password reset).
+                  Use Gmail App Passwords for secure access.
+                </p>
+
+                {emailMsg.text && (
+                  <div className={`alert alert-${emailMsg.type} py-2 small mb-3`}>
+                    {emailMsg.text}
+                  </div>
+                )}
+
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <label className="form-label sf-label">Host</label>
+                    <input type="text" className="form-control sf-input"
+                      placeholder="smtp.gmail.com"
+                      value={emailCfg.host}
+                      onChange={e => setEmailCfg(p => ({...p, host: e.target.value}))} />
+                    <div className="text-muted small mt-1">Example: smtp.gmail.com</div>
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label sf-label">From Email</label>
+                    <input type="email" className="form-control sf-input"
+                      placeholder="yourapp@gmail.com"
+                      value={emailCfg.from_email}
+                      onChange={e => setEmailCfg(p => ({...p, from_email: e.target.value}))} />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label sf-label">Email Name (Display)</label>
+                    <input type="text" className="form-control sf-input"
+                      placeholder="Stockfolio"
+                      value={emailCfg.email_name}
+                      onChange={e => setEmailCfg(p => ({...p, email_name: e.target.value}))} />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label sf-label">App Password</label>
+                    <input type="password" className="form-control sf-input"
+                      placeholder="Gmail App Password (16 chars)"
+                      value={emailCfg.password}
+                      onChange={e => setEmailCfg(p => ({...p, password: e.target.value}))} />
+                    <div className="text-muted small mt-1">
+                      <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" className="sf-auth-link">
+                        Generate Gmail App Password →
+                      </a>
+                    </div>
+                  </div>
+                  <div className="col-md-3">
+                    <label className="form-label sf-label">SMTP Port</label>
+                    <input type="number" className="form-control sf-input"
+                      placeholder="587"
+                      value={emailCfg.port}
+                      onChange={e => setEmailCfg(p => ({...p, port: e.target.value}))} />
+                  </div>
+                  <div className="col-md-3">
+                    <label className="form-label sf-label">Email Status</label>
+                    <select className="form-select sf-input"
+                      value={emailCfg.is_active ? 'ACTIVE' : 'INACTIVE'}
+                      onChange={e => setEmailCfg(p => ({...p, is_active: e.target.value === 'ACTIVE'}))}>
+                      <option value="ACTIVE">ACTIVE</option>
+                      <option value="INACTIVE">INACTIVE</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="d-flex gap-2 mt-4 flex-wrap">
+                  <button className="btn sf-btn-primary px-4"
+                    disabled={savingEmail}
+                    onClick={async () => {
+                      setSavingEmail(true); setEmailMsg({type:'',text:''});
+                      try {
+                        await API.post('email-config/', emailCfg);
+                        setEmailMsg({type:'success', text:'Email configuration saved!'});
+                      } catch(e) {
+                        setEmailMsg({type:'danger', text: e.response?.data?.error || 'Save failed.'});
+                      } finally { setSavingEmail(false); }
+                    }}>
+                    {savingEmail
+                      ? <><span className="spinner-border spinner-border-sm me-2"></span>Saving...</>
+                      : <><i className="bi bi-floppy me-2"></i>Change Settings</>}
+                  </button>
+                  <button className="btn sf-btn-ghost px-4"
+                    disabled={testingEmail}
+                    onClick={async () => {
+                      setTestingEmail(true); setEmailMsg({type:'',text:''});
+                      try {
+                        const r = await API.post('email-config/test/');
+                        setEmailMsg({type:'success', text: r.data.message});
+                      } catch(e) {
+                        setEmailMsg({type:'danger', text: e.response?.data?.error || 'Test failed.'});
+                      } finally { setTestingEmail(false); }
+                    }}>
+                    {testingEmail
+                      ? <><span className="spinner-border spinner-border-sm me-2"></span>Testing...</>
+                      : <><i className="bi bi-send me-2"></i>Send Test Email</>}
+                  </button>
+                  <button className="btn btn-outline-danger px-4"
+                    onClick={async () => {
+                      if (!window.confirm('Clear email configuration?')) return;
+                      await API.delete('email-config/');
+                      setEmailCfg({host:'smtp.gmail.com',port:587,from_email:'',email_name:'',password:'',is_active:true});
+                      setEmailMsg({type:'info', text:'Configuration cleared.'});
+                    }}>
+                    <i className="bi bi-trash me-2"></i>Clear
+                  </button>
+                </div>
+              </div>
+            </div>}
 
         </div>
       </div>

@@ -4,6 +4,7 @@ from django.contrib.auth.models import AbstractUser
 
 class User(AbstractUser):
     is_verified = models.BooleanField(default=False)
+    phone       = models.CharField(max_length=20, blank=True)
 
     def __str__(self):
         return self.username
@@ -189,3 +190,44 @@ class UserSettings(models.Model):
 
     def __str__(self):
         return f"Settings for {self.user.username}"
+
+
+class EmailConfig(models.Model):
+    """Admin-configured SMTP settings stored in DB — editable from Settings UI."""
+    host        = models.CharField(max_length=255, default='smtp.gmail.com')
+    port        = models.IntegerField(default=587)
+    from_email  = models.EmailField(max_length=255)
+    email_name  = models.CharField(max_length=255, blank=True)   # display name
+    password    = models.CharField(max_length=255)               # app password
+    is_active   = models.BooleanField(default=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Email Configuration'
+
+    def __str__(self):
+        return f'EmailConfig: {self.from_email}'
+
+
+class OTPCode(models.Model):
+    PURPOSE_CHOICES = (
+        ('register',        'Registration Verification'),
+        ('forgot_password', 'Forgot Password'),
+    )
+    user       = models.ForeignKey(User, on_delete=models.CASCADE, related_name='otps', null=True, blank=True)
+    email      = models.EmailField()          # store email separately — user may not exist yet
+    code       = models.CharField(max_length=6)
+    purpose    = models.CharField(max_length=20, choices=PURPOSE_CHOICES)
+    is_used    = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def is_expired(self):
+        from django.utils import timezone
+        from datetime import timedelta
+        return timezone.now() > self.created_at + timedelta(minutes=10)
+
+    def __str__(self):
+        return f"{self.email} - {self.purpose} - {self.code}"

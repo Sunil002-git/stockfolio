@@ -4,6 +4,7 @@ import { ThemeProvider } from "./context/ThemeContext";
 import { BrokerProvider } from "./context/BrokerContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./pages/Dashboard";
 import Positions from "./pages/Positions";
 import AddTrade from "./pages/AddTrade";
@@ -12,6 +13,7 @@ import Analytics from "./pages/Analytics";
 import TradeHistory from "./pages/TradeHistory";
 import Predict from "./pages/Predict";
 import Settings from "./pages/Settings";
+import Profile from "./pages/Profile";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
@@ -20,6 +22,14 @@ import "./styles.css";
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem("token");
   return token ? children : <Navigate to="/" replace />;
+};
+
+const AdminRoute = ({ children }) => {
+  const token   = localStorage.getItem("token");
+  const isAdmin = localStorage.getItem("is_superuser") === "true";
+  if (!token)   return <Navigate to="/" replace />;
+  if (!isAdmin) return <Navigate to="/dashboard" replace />;
+  return children;
 };
 
 const PublicRoute = ({ children }) => {
@@ -33,17 +43,19 @@ function App() {
       <BrokerProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/"             element={<PublicRoute><Login /></PublicRoute>} />
-            <Route path="/register"     element={<PublicRoute><Register /></PublicRoute>} />
-            <Route path="/dashboard"    element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-            <Route path="/positions"    element={<PrivateRoute><Positions /></PrivateRoute>} />
-            <Route path="/add-trade"    element={<PrivateRoute><AddTrade /></PrivateRoute>} />
-            <Route path="/transactions" element={<PrivateRoute><Transactions /></PrivateRoute>} />
-            <Route path="/analytics"    element={<PrivateRoute><Analytics /></PrivateRoute>} />
-            <Route path="/history"      element={<PrivateRoute><TradeHistory /></PrivateRoute>} />
-            <Route path="/predict"      element={<PrivateRoute><Predict /></PrivateRoute>} />
-            <Route path="/settings"     element={<PrivateRoute><Settings /></PrivateRoute>} />
-            <Route path="*"             element={<Navigate to="/" replace />} />
+            <Route path="/"                element={<PublicRoute><Login /></PublicRoute>} />
+            <Route path="/register"        element={<PublicRoute><Register /></PublicRoute>} />
+            <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+            <Route path="/dashboard"       element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+            <Route path="/positions"       element={<PrivateRoute><Positions /></PrivateRoute>} />
+            <Route path="/add-trade"       element={<PrivateRoute><AddTrade /></PrivateRoute>} />
+            <Route path="/transactions"    element={<PrivateRoute><Transactions /></PrivateRoute>} />
+            <Route path="/analytics"       element={<PrivateRoute><Analytics /></PrivateRoute>} />
+            <Route path="/history"         element={<PrivateRoute><TradeHistory /></PrivateRoute>} />
+            <Route path="/predict"         element={<PrivateRoute><Predict /></PrivateRoute>} />
+            <Route path="/settings"        element={<AdminRoute><Settings /></AdminRoute>} />
+            <Route path="/profile"         element={<PrivateRoute><Profile /></PrivateRoute>} />
+            <Route path="*"               element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
       </BrokerProvider>

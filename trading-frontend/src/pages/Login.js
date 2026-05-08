@@ -18,6 +18,12 @@ const Login = () => {
     try {
       const res = await API.post("login/", form);
       localStorage.setItem("token", res.data.access);
+      // Fetch profile to store superuser flag before navigating
+      try {
+        const profile = await API.get("profile/");
+        const admin = !!(profile.data.is_staff || profile.data.is_superuser);
+        localStorage.setItem("is_superuser", admin ? "true" : "false");
+      } catch { localStorage.setItem("is_superuser", "false"); }
       navigate("/dashboard");
     } catch (err) {
       setError(err.response?.data?.detail || "Invalid username or password.");
@@ -96,10 +102,13 @@ const Login = () => {
         </form>
 
         <div className="sf-auth-footer">
-          Don't have an account?{" "}
-          <Link to="/register" className="sf-auth-link">
-            Create one
-          </Link>
+          <div>
+            Don't have an account?{" "}
+            <Link to="/register" className="sf-auth-link">Create one</Link>
+          </div>
+          <div className="mt-1">
+            <Link to="/forgot-password" className="sf-auth-link">Forgot password?</Link>
+          </div>
         </div>
       </div>
     </div>

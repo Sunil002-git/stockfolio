@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .models import Broker, Journal, Trade, TradeGroup, Transaction, User, UserSettings
+from .models import Broker, EmailConfig, Journal, OTPCode, Trade, TradeGroup, Transaction, User, UserSettings
 from .serializers import (
     BrokerSerializer,
     BuyTradeSerializer,
@@ -616,3 +616,249 @@ class UserSettingsView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ─── OTP: Send (register + forgot password) ───────────────────────────────────
+
+class SendOTPView(APIView):
+    permission_classes = []  # public
+
+    def post(self, request):
+        email   = request.data.get('email', '').strip().lower()
+        purpose = request.data.get('purpose', 'register')  # 'register' | 'forgot_password'
+
+        if not email:
+            return Response({'error': 'Email is required.'}, status=400)
+
+        if purpose == 'forgot_password':
+            try:
+                user = User.objects.get(email__iexact=email)
+            except User.DoesNotExist:
+                # Don't reveal whether email exists
+                return Response({'message': 'If that email is registered, an OTP has been sent.'})
+        else:
+            # Registration — email must NOT already exist
+            if User.objects.filter(email__iexact=email).exists():
+                return Response({'error': 'An account with this email already exists.'}, status=400)
+            user = None
+
+        from .email_utils import generate_otp, send_otp_email
+        code = generate_otp()
+
+        OTPCode.objects.create(
+            user    = User.objects.filter(email__iexact=email).first(),
+            email   = email,
+            code    = code,
+            purpose = purpose,
+        )
+
+        try:
+            send_otp_email(email, code, purpose)
+        except Exception as e:
+            return Response({'error': f'Failed to send email: {str(e)}'}, status=500)
+
+        return Response({'message': 'OTP sent successfully.'})
+
+
+# ─── OTP: Verify ──────────────────────────────────────────────────────────────
+
+class VerifyOTPView(APIView):
+    permission_classes = []  # public
+
+    def post(self, request):
+        email   = request.data.get('email', '').strip().lower()
+        code    = request.data.get('code', '').strip()
+        purpose = request.data.get('purpose', 'register')
+
+        otp = OTPCode.objects.filter(
+            email=email, code=code, purpose=purpose, is_used=False
+        ).order_by('-created_at').first()
+
+        if not otp:
+            return Response({'error': 'Invalid OTP.'}, status=400)
+        if otp.is_expired():
+            return Response({'error': 'OTP has expired. Please request a new one.'}, status=400)
+
+        otp.is_used = True
+        otp.save()
+        return Response({'verified': True})
+
+
+# ─── Register with OTP ────────────────────────────────────────────────────────
+
+class RegisterWithOTPView(APIView):
+    permission_classes = []  # public
+
+    def post(self, request):
+        email = request.data.get('email', '').strip().lower()
+        code  = request.data.get('otp_code', '').strip()
+
+        # Re-verify OTP (mark as used atomically)
+        otp = OTPCode.objects.filter(
+            email=email, code=code, purpose='register', is_used=False
+        ).order_by('-created_at').first()
+
+        if not otp or otp.is_expired():
+            return Response({'error': 'OTP invalid or expired.'}, status=400)
+
+        serializer = RegisterSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=400)
+
+        user = serializer.save()
+        user.is_verified = True
+        user.save()
+        otp.is_used = True
+        otp.save()
+
+        return Response({'message': 'Account created successfully. You can now sign in.'}, status=201)
+
+
+# ─── Forgot Password ──────────────────────────────────────────────────────────
+
+class ResetPasswordView(APIView):
+    permission_classes = []  # public
+
+    def post(self, request):
+        email       = request.data.get('email', '').strip().lower()
+        code        = request.data.get('otp_code', '').strip()
+        new_password = request.data.get('new_password', '').strip()
+
+        if not all([email, code, new_password]):
+            return Response({'error': 'Email, OTP, and new password are required.'}, status=400)
+
+        otp = OTPCode.objects.filter(
+            email=email, code=code, purpose='forgot_password', is_used=False
+        ).order_by('-created_at').first()
+
+        if not otp or otp.is_expired():
+            return Response({'error': 'OTP invalid or expired.'}, status=400)
+
+        try:
+            user = User.objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=404)
+
+        user.set_password(new_password)
+        user.save()
+        otp.is_used = True
+        otp.save()
+
+        return Response({'message': 'Password reset successfully. You can now sign in.'})
+
+
+# ─── Profile ──────────────────────────────────────────────────────────────────
+
+class ProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        u = request.user
+        return Response({
+            'username':     u.username,
+            'email':        u.email,
+            'first_name':   u.first_name,
+            'last_name':    u.last_name,
+            'phone':        getattr(u, 'phone', ''),
+            'is_verified':  u.is_verified,
+            'is_staff':     u.is_staff,
+            'is_superuser': u.is_superuser,
+            'date_joined':  u.date_joined.strftime('%Y-%m-%d'),
+        })
+
+    def patch(self, request):
+        u    = request.user
+        data = request.data
+
+        # Basic fields
+        for field in ('first_name', 'last_name', 'phone'):
+            if field in data:
+                setattr(u, field, data[field])
+
+        # Email change — requires re-verification (just update; no OTP here for simplicity)
+        if 'email' in data and data['email'] != u.email:
+            if User.objects.filter(email__iexact=data['email']).exclude(pk=u.pk).exists():
+                return Response({'error': 'That email is already in use.'}, status=400)
+            u.email = data['email']
+
+        # Password change
+        if data.get('new_password'):
+            if not data.get('current_password'):
+                return Response({'error': 'Current password is required to set a new one.'}, status=400)
+            if not u.check_password(data['current_password']):
+                return Response({'error': 'Current password is incorrect.'}, status=400)
+            u.set_password(data['new_password'])
+
+        u.save()
+        return Response({
+            'message':    'Profile updated.',
+            'username':   u.username,
+            'email':      u.email,
+            'first_name': u.first_name,
+            'last_name':  u.last_name,
+            'phone':      getattr(u, 'phone', ''),
+        })
+
+
+# ─── Email Config (admin only) ────────────────────────────────────────────────
+
+class EmailConfigView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def _is_admin(self, user):
+        return user.is_staff or user.is_superuser
+
+    def get(self, request):
+        if not self._is_admin(request.user):
+            return Response({'error': 'Superuser access required.'}, status=403)
+        cfg = EmailConfig.objects.first()
+        if not cfg:
+            return Response({})
+        return Response({
+            'host':       cfg.host,
+            'port':       cfg.port,
+            'from_email': cfg.from_email,
+            'email_name': cfg.email_name,
+            'is_active':  cfg.is_active,
+            # Never return password for security
+        })
+
+    def post(self, request):
+        if not self._is_admin(request.user):
+            return Response({'error': 'Superuser access required.'}, status=403)
+        data = request.data
+        cfg, _ = EmailConfig.objects.get_or_create(pk=1)
+        cfg.host       = data.get('host',       cfg.host)
+        cfg.port       = int(data.get('port',   cfg.port))
+        cfg.from_email = data.get('from_email', cfg.from_email)
+        cfg.email_name = data.get('email_name', cfg.email_name)
+        cfg.is_active  = data.get('is_active',  cfg.is_active)
+        if data.get('password'):
+            cfg.password = data['password']
+        cfg.save()
+        return Response({'message': 'Email configuration saved.'})
+
+    def delete(self, request):
+        if not self._is_admin(request.user):
+            return Response({'error': 'Superuser access required.'}, status=403)
+        EmailConfig.objects.all().delete()
+        return Response({'message': 'Email configuration cleared.'})
+
+
+# ─── Test Email ───────────────────────────────────────────────────────────────
+
+class TestEmailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if not (request.user.is_staff or request.user.is_superuser):
+            return Response({'error': 'Superuser access required.'}, status=403)
+        to_email = request.user.email
+        if not to_email:
+            return Response({'error': 'Your account has no email address set.'}, status=400)
+        from .email_utils import send_otp_email
+        try:
+            send_otp_email(to_email, '123456', 'register')
+            return Response({'message': f'Test email sent to {to_email}.'})
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)

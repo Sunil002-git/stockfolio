@@ -4,11 +4,13 @@ import { useTheme } from "../context/ThemeContext";
 
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const navigate  = useNavigate();
+  const location  = useLocation();
+  const isAdmin   = localStorage.getItem("is_superuser") === "true";
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("is_superuser");
     navigate("/");
   };
 
@@ -22,7 +24,9 @@ const Navbar = () => {
     { to: "/transactions", icon: "bank",            label: "Funds" },
     { to: "/analytics",    icon: "bar-chart-line",  label: "Analytics" },
     { to: "/predict",      icon: "cpu",             label: "Predict" },
-    { to: "/settings",     icon: "gear",            label: "Settings" },
+    // Settings only visible to superuser
+    ...(isAdmin ? [{ to: "/settings", icon: "gear", label: "Settings" }] : []),
+    { to: "/profile",      icon: "person-circle",   label: "Profile" },
   ];
 
   return (
