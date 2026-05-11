@@ -1,5 +1,8 @@
 from datetime import date, timedelta
+from django.contrib.auth import authenticate
+from django.db import models
 from django.db.models import Sum
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import viewsets, generics, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -29,8 +32,49 @@ class RegisterView(generics.CreateAPIView):
     permission_classes = [AllowAny]
 
 
-class LoginView(TokenObtainPairView):
-    pass
+class LoginView(APIView):
+    """
+    Custom login — returns access + refresh tokens plus basic user info.
+    """
+    permission_classes = []
+
+    def post(self, request):
+        username = request.data.get('username', '').strip()
+        password = request.data.get('password', '').strip()
+
+        if not username or not password:
+            return Response({'error': 'Username and password are required.'}, status=400)
+
+        user = authenticate(request, username=username, password=password)
+        if not user:
+            return Response({'error': 'Invalid username or password.'}, status=401)
+
+        if not user.is_active:
+            return Response({'error': 'Your account has been deactivated. Contact admin.'}, status=403)
+
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'access':       str(refresh.access_token),
+            'refresh':      str(refresh),
+            'is_superuser': user.is_superuser,
+            'is_staff':     user.is_staff,
+            'username':     user.username,
+        })
+
+
+class TokenRefreshView(APIView):
+    """Silent token refresh — call with refresh token, get new access token."""
+    permission_classes = []
+
+    def post(self, request):
+        refresh_token = request.data.get('refresh')
+        if not refresh_token:
+            return Response({'error': 'Refresh token required.'}, status=400)
+        try:
+            refresh = RefreshToken(refresh_token)
+            return Response({'access': str(refresh.access_token)})
+        except Exception:
+            return Response({'error': 'Invalid or expired refresh token.'}, status=401)
 
 
 # ─── Balance helper ───────────────────────────────────────────────────────────
@@ -862,3 +906,111 @@ class TestEmailView(APIView):
             return Response({'message': f'Test email sent to {to_email}.'})
         except Exception as e:
             return Response({'error': str(e)}, status=500)
+
+
+# ─── Admin: User Management ───────────────────────────────────────────────────
+
+class AdminUsersView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def _check_admin(self, user):
+        if not (user.is_staff or user.is_superuser):
+            return Response({'error': 'Superuser access required.'}, status=403)
+        return None
+
+    def get(self, request):
+        """List all registered users with stats."""
+        err = self._check_admin(request.user)
+        if err: return err
+
+        search = request.query_params.get('search', '').strip()
+        status_filter = request.query_params.get('status', '')  # active | inactive | all
+
+        users = User.objects.all().order_by('-date_joined')
+
+        if search:
+            users = users.filter(
+                models.Q(username__icontains=search) |
+                models.Q(email__icontains=search) |
+                models.Q(first_name__icontains=search) |
+                models.Q(last_name__icontains=search)
+            )
+        if status_filter == 'active':
+            users = users.filter(is_active=True)
+        elif status_filter == 'inactive':
+            users = users.filter(is_active=False)
+
+        data = []
+        for u in users:
+            trade_count = Trade.objects.filter(user=u).count()
+            data.append({
+                'id':           u.id,
+                'username':     u.username,
+                'email':        u.email,
+                'first_name':   u.first_name,
+                'last_name':    u.last_name,
+                'phone':        getattr(u, 'phone', ''),
+                'is_active':    u.is_active,
+                'is_staff':     u.is_staff,
+                'is_superuser': u.is_superuser,
+                'is_verified':  getattr(u, 'is_verified', False),
+                'date_joined':  u.date_joined.strftime('%Y-%m-%d'),
+                'last_login':   u.last_login.strftime('%Y-%m-%d %H:%M') if u.last_login else None,
+                'trade_count':  trade_count,
+            })
+
+        return Response({
+            'users': data,
+            'total': len(data),
+            'active':   sum(1 for u in data if u['is_active']),
+            'inactive': sum(1 for u in data if not u['is_active']),
+        })
+
+    def patch(self, request, user_id):
+        """Toggle active/inactive or update role."""
+        err = self._check_admin(request.user)
+        if err: return err
+
+        if request.user.id == user_id:
+            return Response({'error': 'You cannot modify your own account here.'}, status=400)
+
+        try:
+            target = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=404)
+
+        # Prevent modifying another superuser
+        if target.is_superuser and not request.user.is_superuser:
+            return Response({'error': 'Cannot modify a superuser account.'}, status=403)
+
+        if 'is_active' in request.data:
+            target.is_active = bool(request.data['is_active'])
+        if 'is_staff' in request.data:
+            target.is_staff = bool(request.data['is_staff'])
+
+        target.save()
+        return Response({
+            'message':   f'User {target.username} updated.',
+            'is_active': target.is_active,
+            'is_staff':  target.is_staff,
+        })
+
+    def delete(self, request, user_id):
+        """Permanently delete a user and all their data."""
+        err = self._check_admin(request.user)
+        if err: return err
+
+        if request.user.id == user_id:
+            return Response({'error': 'You cannot delete your own account.'}, status=400)
+
+        try:
+            target = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=404)
+
+        if target.is_superuser:
+            return Response({'error': 'Cannot delete a superuser account.'}, status=403)
+
+        username = target.username
+        target.delete()
+        return Response({'message': f'User {username} deleted permanently.'})

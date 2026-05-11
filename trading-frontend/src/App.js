@@ -14,6 +14,7 @@ import TradeHistory from "./pages/TradeHistory";
 import Predict from "./pages/Predict";
 import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
+import AdminUsers from "./pages/AdminUsers";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
@@ -24,17 +25,17 @@ const PrivateRoute = ({ children }) => {
   return token ? children : <Navigate to="/" replace />;
 };
 
+const PublicRoute = ({ children }) => {
+  const token = localStorage.getItem("token");
+  return token ? <Navigate to="/dashboard" replace /> : children;
+};
+
 const AdminRoute = ({ children }) => {
   const token   = localStorage.getItem("token");
   const isAdmin = localStorage.getItem("is_superuser") === "true";
   if (!token)   return <Navigate to="/" replace />;
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
   return children;
-};
-
-const PublicRoute = ({ children }) => {
-  const token = localStorage.getItem("token");
-  return token ? <Navigate to="/dashboard" replace /> : children;
 };
 
 function App() {
@@ -53,8 +54,9 @@ function App() {
             <Route path="/analytics"       element={<PrivateRoute><Analytics /></PrivateRoute>} />
             <Route path="/history"         element={<PrivateRoute><TradeHistory /></PrivateRoute>} />
             <Route path="/predict"         element={<PrivateRoute><Predict /></PrivateRoute>} />
-            <Route path="/settings"        element={<AdminRoute><Settings /></AdminRoute>} />
             <Route path="/profile"         element={<PrivateRoute><Profile /></PrivateRoute>} />
+            <Route path="/settings"        element={<AdminRoute><Settings /></AdminRoute>} />
+            <Route path="/admin/users"     element={<AdminRoute><AdminUsers /></AdminRoute>} />
             <Route path="*"               element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>

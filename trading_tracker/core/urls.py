@@ -1,7 +1,8 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    RegisterView, LoginView,
+    RegisterView, LoginView, TokenRefreshView,
+    AdminUsersView,
     BuyTradeView, SellTradeView,
     TradeGroupViewSet, TransactionViewSet,
     DashboardView, AnalyticsView, TradeHistoryView,
@@ -25,6 +26,11 @@ urlpatterns = [
     path('register/',              RegisterView.as_view(),          name='register'),
     path('register/otp/',          RegisterWithOTPView.as_view(),   name='register-otp'),
     path('login/',                 LoginView.as_view(),             name='login'),
+    path('token/refresh/',         TokenRefreshView.as_view(),      name='token-refresh'),
+
+    # Admin user management
+    path('admin/users/',           AdminUsersView.as_view(),         name='admin-users'),
+    path('admin/users/<int:user_id>/', AdminUsersView.as_view(),     name='admin-user-detail'),
 
     # OTP
     path('otp/send/',              SendOTPView.as_view(),           name='otp-send'),

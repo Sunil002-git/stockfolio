@@ -17,13 +17,12 @@ const Login = () => {
     setError("");
     try {
       const res = await API.post("login/", form);
-      localStorage.setItem("token", res.data.access);
-      // Fetch profile to store superuser flag before navigating
-      try {
-        const profile = await API.get("profile/");
-        const admin = !!(profile.data.is_staff || profile.data.is_superuser);
-        localStorage.setItem("is_superuser", admin ? "true" : "false");
-      } catch { localStorage.setItem("is_superuser", "false"); }
+      // Store both tokens
+      localStorage.setItem("token",         res.data.access);
+      localStorage.setItem("refresh_token", res.data.refresh);
+      // Superuser flag comes directly from login response — no extra API call needed
+      const admin = !!(res.data.is_superuser || res.data.is_staff);
+      localStorage.setItem("is_superuser", admin ? "true" : "false");
       navigate("/dashboard");
     } catch (err) {
       setError(err.response?.data?.detail || "Invalid username or password.");

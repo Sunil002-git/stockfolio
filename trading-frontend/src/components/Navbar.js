@@ -25,7 +25,10 @@ const Navbar = () => {
     { to: "/analytics",    icon: "bar-chart-line",  label: "Analytics" },
     { to: "/predict",      icon: "cpu",             label: "Predict" },
     // Settings only visible to superuser
-    ...(isAdmin ? [{ to: "/settings", icon: "gear", label: "Settings" }] : []),
+    ...(isAdmin ? [
+      { to: "/settings",    icon: "gear",         label: "Settings" },
+      { to: "/admin/users", icon: "people-gear", label: "Users"    },
+    ] : []),
     { to: "/profile",      icon: "person-circle",   label: "Profile" },
   ];
 

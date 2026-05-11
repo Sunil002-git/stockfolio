@@ -152,10 +152,21 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 AUTH_USER_MODEL = 'core.User'
 
+from datetime import timedelta
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME':  timedelta(hours=12),   # stays logged in for 12 hrs
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),    # refresh valid 30 days
+    'ROTATE_REFRESH_TOKENS':  True,                  # issue new refresh on every use
+    'BLACKLIST_AFTER_ROTATION': False,               # no blacklist app needed
+    'UPDATE_LAST_LOGIN': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
 MEDIA_URL = '/media/'
