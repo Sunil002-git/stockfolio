@@ -11,8 +11,15 @@ sqlparse==0.5.5
 tzdata==2026.1
 whitenoise==6.12.0
 
-# Prediction — no TensorFlow or model file needed
+# Prediction core
 numpy>=1.24
 pandas>=2.0
 scikit-learn>=1.3
 yfinance>=0.2.40
+
+# Enhanced ML models
+xgboost>=2.0.0
+statsmodels>=0.14.0
+
+# News sentiment (no API key needed)
+vaderSentiment>=3.3.2

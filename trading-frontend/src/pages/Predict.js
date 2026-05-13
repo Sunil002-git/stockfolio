@@ -190,7 +190,7 @@ const Predict = () => {
         <div className="sf-page-header mb-4">
           <h2 className="sf-page-title">Stock Prediction</h2>
           <p className="sf-page-subtitle">
-            LSTM model • Future {forecastDays}-day forecast • Powered by Yahoo Finance
+            5-model adaptive ensemble • News sentiment • Future {forecastDays}-day forecast • Powered by Yahoo Finance
           </p>
         </div>
 
@@ -306,7 +306,7 @@ const Predict = () => {
           <div className="text-center py-5">
             <div className="sf-pred-loading">
               <div className="spinner-border sf-spinner mb-3" style={{ width: "3rem", height: "3rem" }}></div>
-              <h5 className="text-muted">Running LSTM model...</h5>
+              <h5 className="text-muted">Running 5-model ensemble...</h5>
               <p className="text-muted small">Fetching 10 years of data and generating {forecastDays}-day forecast</p>
             </div>
           </div>
@@ -404,6 +404,109 @@ const Predict = () => {
                 The forecast starts from today's price ({fmt(result.current_price)}).
               </div>
             </div>
+
+            {/* ── Sentiment + Model Weights ── */}
+            {(result.sentiment || result.models_used) && (
+              <div className="row g-4 mb-4">
+
+                {/* News Sentiment */}
+                {result.sentiment && (
+                  <div className="col-lg-7">
+                    <div className="sf-section-card">
+                      <div className="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                        <h5 className="sf-section-title mb-0">
+                          <i className="bi bi-newspaper me-2"></i>
+                          News Sentiment
+                          {result.sector && <span className="ms-2 sf-exchange-tag">{result.sector}</span>}
+                        </h5>
+                        <span  style={{ fontSize: '0.82rem' }}>
+                          {result.sentiment.overall === 'positive' ? '📈' :
+                           result.sentiment.overall === 'negative' ? '📉' : '➡️'}{' '}
+                          {result.sentiment.overall.toUpperCase()}
+                          {' · '}Score: {result.sentiment.score > 0 ? '+' : ''}{result.sentiment.score}
+                        </span>
+                      </div>
+
+                      {/* Sentiment breakdown */}
+                      <div className="d-flex gap-3 mb-3 flex-wrap">
+                        <span className="sf-broker-tag" style={{ background:'rgba(34,197,94,0.1)', borderColor:'rgba(34,197,94,0.3)', color:'#22c55e' }}>
+                          <i className="bi bi-hand-thumbs-up me-1"></i>{result.sentiment.pos_count} Positive
+                        </span>
+                        <span className="sf-broker-tag" style={{ background:'rgba(239,68,68,0.1)', borderColor:'rgba(239,68,68,0.3)', color:'#ef4444' }}>
+                          <i className="bi bi-hand-thumbs-down me-1"></i>{result.sentiment.neg_count} Negative
+                        </span>
+                        <span className="sf-broker-tag">
+                          <i className="bi bi-dash-circle me-1"></i>{result.sentiment.neu_count} Neutral
+                        </span>
+                        <span className="text-muted small" style={{ alignSelf:'center' }}>
+                          from {result.sentiment.total} headlines
+                        </span>
+                      </div>
+
+                      {/* Headlines */}
+                      <div className="sf-headlines-list">
+                        {result.sentiment.headlines.map((h, i) => (
+                          <div key={i} className="sf-headline-row">
+                            <span></span>
+                            <div className="sf-headline-text">
+                              <div className="sf-headline-title">{h.headline}</div>
+                              <div className="sf-headline-meta">
+                                Score: <span className={h.score >= 0 ? 'sf-profit' : 'sf-loss'}>
+                                  {h.score > 0 ? '+' : ''}{h.score}
+                                </span>
+                                {h.published && <span className="ms-2 text-muted">{h.published}</span>}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="text-muted small mt-2">
+                        <i className="bi bi-info-circle me-1"></i>
+                        Sentiment analysis adjusts the forecast by up to ±1.5% and can change the signal.
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Model weights */}
+                {result.models_used && (
+                  <div className="col-lg-5">
+                    <div className="sf-section-card">
+                      <h5 className="sf-section-title mb-3">
+                        <i className="bi bi-diagram-3 me-2"></i>Model Weights
+                      </h5>
+                      <p className="text-muted small mb-3">
+                        Weights are computed automatically from each model's 30-day backtest RMSE.
+                        Lower error = higher weight.
+                      </p>
+                      {Object.entries(result.models_used)
+                        .sort(([,a],[,b]) => b - a)
+                        .map(([name, weight]) => (
+                          <div key={name} className="mb-3">
+                            <div className="d-flex justify-content-between mb-1">
+                              <span className="sf-label">{name}</span>
+                              <span className="sf-label">{weight}%</span>
+                            </div>
+                            <div className="sf-weight-bar-bg">
+                              <div className="sf-weight-bar-fill" style={{ width: weight + '%' }}></div>
+                            </div>
+                          </div>
+                      ))}
+                      {result.accuracy.best_model && (
+                        <div className="mt-3 p-2 rounded d-flex align-items-center gap-2"
+                          style={{ background:'rgba(77,159,255,0.08)', border:'1px solid rgba(77,159,255,0.2)' }}>
+                          <i className="bi bi-trophy text-warning"></i>
+                          <span className="small">
+                            Best performer this run: <strong>{result.accuracy.best_model}</strong>
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Forecast table + accuracy */}
             <div className="row g-4">
